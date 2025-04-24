@@ -13,6 +13,7 @@ import google.generativeai as genai
 import os
 from tools import ArticleTools
 from langchain_openai import ChatOpenAI
+from langchain_core.caches import BaseCache
 from dotenv import load_dotenv
 from datetime import datetime, date, timedelta
 from langchain_community.tools.tavily_search import TavilySearchResults
