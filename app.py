@@ -105,7 +105,9 @@ async def query_bot(question: str, thread_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the chatbot API. Use /query to interact with the bot."}
 
 if __name__ == "__main__":
     import uvicorn
