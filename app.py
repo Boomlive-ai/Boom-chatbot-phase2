@@ -5,6 +5,7 @@ import os
 import google.generativeai as genai
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
+from fastapi.middleware.cors import CORSMiddleware
 from utils import prioritize_sources
 app = FastAPI()
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
@@ -16,6 +17,14 @@ from bot import chatbot
 mybot = chatbot()
 workflow = mybot()
 
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure this appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Define input schema
 class Document(BaseModel):
     thread_id: str
