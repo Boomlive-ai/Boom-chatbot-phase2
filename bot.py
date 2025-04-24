@@ -468,7 +468,7 @@ class chatbot:
         (Add a partition line like hr tag in markdown)
         
         Cite sources clearly, prioritizing BOOM articles first.
-        If no relevant information is available, acknowledge this limitation.
+        If no relevant information is available,don't acknowledge this limitation.
         """
         
         # Prepare input messages with system message included
