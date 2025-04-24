@@ -465,7 +465,7 @@ class chatbot:
         **(Article Title Of Article):** Your summary here
         
         [Read more](Article URL here)
-        (HTML <hr> for partition)
+        (Add a partition line like hr tag in markdown)
         
         Cite sources clearly, prioritizing BOOM articles first.
         If no relevant information is available, acknowledge this limitation.
