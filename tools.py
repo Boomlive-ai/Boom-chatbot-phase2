@@ -9,66 +9,7 @@ from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,ex
 
 class ArticleTools:
     def __init__(self):
-        # Mock database of articles for demonstration
-        articles_db = [
-            {
-                "id": 1,
-                "title": "Understanding LangGraph Architecture",
-                "content": "LangGraph provides a flexible framework for building stateful workflows with LLMs...",
-                "date": "2025-04-10",
-                "topics": ["AI", "LLMs", "Architecture"]
-            },
-            {
-                "id": 2,
-                "title": "Advances in RAG Systems",
-                "content": "Recent improvements in Retrieval Augmented Generation have led to significant accuracy increases...",
-                "date": "2025-04-12",
-                "topics": ["RAG", "NLP", "AI"]
-            },
-            {
-                "id": 3,
-                "title": "The Future of Generative AI",
-                "content": "Generative AI systems continue to evolve with multimodal capabilities...",
-                "date": "2025-04-15",
-                "topics": ["Generative AI", "Future Tech"]
-            },
-            {
-                "id": 4,
-                "title": "LLM Reasoning Capabilities",
-                "content": "New benchmarks show improved reasoning in the latest generation of language models...",
-                "date": "2025-03-20",
-                "topics": ["LLMs", "Reasoning", "AI"]
-            },
-            {
-                "id": 5,
-                "title": "Implementing ChatGPT-like Systems",
-                "content": "A deep dive into the architecture behind modern conversational AI systems...",
-                "date": "2025-03-15",
-                "topics": ["ChatGPT", "Architecture", "AI"]
-            },
-            {
-                "id": 6,
-                "title": "The Rise of Multimodal Models",
-                "content": "Exploring how models now handle text, images, and audio simultaneously...",
-                "date": "2025-04-18",
-                "topics": ["Multimodal", "AI"]
-            },
-            {
-                "id": 7,
-                "title": "RAG vs Fine-tuning: A Comparison",
-                "content": "When to use retrieval augmentation versus fine-tuning your models...",
-                "date": "2025-04-01",
-                "topics": ["RAG", "Fine-tuning", "LLMs"]
-            },
-            {
-                "id": 8,
-                "title": "Vector Databases for AI Applications",
-                "content": "How modern vector databases support semantic search in AI systems...",
-                "date": "2025-03-25",
-                "topics": ["Vector DB", "Infrastructure", "AI"]
-            }
-        ]
-
+        pass
     @staticmethod
     @tool
     def rag_search(query: str, language_code: str) -> str:
