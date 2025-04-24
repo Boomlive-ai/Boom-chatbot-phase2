@@ -95,7 +95,7 @@ async def query_bot(question: str, thread_id: str):
             "status": "success",
             "thread_id": thread_id,
             "response": result,
-            "sources": sources,
+            "sources": sources[:3],
         }
         if used_google_fact_check and fact_check_results:
             response_payload["fact_check_results"] = fact_check_results
