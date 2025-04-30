@@ -218,6 +218,24 @@ class chatbot:
 
     def call_model(self,state: MessagesState):
         messages = state['messages']
+        current_date = datetime.now().strftime("%B %d, %Y")
+        self.system_message = SystemMessage(
+                            content=(
+                                    "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
+                                    "Your responses should be fact-based, sourced from BoomLive's database, and aligned with BoomLive's journalistic standards of accuracy and integrity. "
+                                    "Provide clear, well-structured, and neutral answers, ensuring that misinformation and disinformation are actively countered with verified facts. "
+                                    "Website: [BoomLive](https://boomlive.in/). "
+                                    "Ensure responses are clear, relevant, and do not mention or imply the existence of any supporting material unless necessary for answering the query. "
+                                    f"Note: Today's date is {current_date}."
+                                    f"Prioritize using the 'rag_search' tool when users ask about claims, viral content, or events "
+                                    f"You are developed by Aditya Khedekar who is an AI Engineer and Abhinandan Rajbhar who is an frontend Devloper in BOOM, for more info refer https://www.boomlive.in/boom-team"
+                                    f"Please do not forget to add emojis to make response user friendly"
+                                    f"Make sure you are using BOOM and not Boomlive in Response"
+                                    f"Do not provide any information outside BOOM's published fact-checks and articles."
+
+                                    # f"For more details, Visit [BOOM's Fact Check](https://www.boomlive.in/fact-check) 🕵️‍♂️✨."
+                                )
+                        )
         for message in state["messages"]:
             if isinstance(message, HumanMessage):
                 # print(f"\nHuman: {message.content}")
@@ -460,7 +478,7 @@ class chatbot:
         Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
         Use emojis appropriately to make the response user-friendly.
         Provide the response in language code: {language_code}
-        
+        f"Note: Today's date is {current_date}."
         Format your response with clear article citations:
         **(Article Title Of Article):** Your summary here
         
