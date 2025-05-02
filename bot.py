@@ -219,7 +219,7 @@ class chatbot:
     def call_model(self,state: MessagesState):
         messages = state['messages']
         current_date = datetime.now().strftime("%B %d, %Y")
-        self.system_message = SystemMessage(
+        updated_system_message = SystemMessage(
                             content=(
                                     "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
                                     "Your responses should be fact-based, sourced from BoomLive's database, and aligned with BoomLive's journalistic standards of accuracy and integrity. "
@@ -240,7 +240,7 @@ class chatbot:
             if isinstance(message, HumanMessage):
                 # print(f"\nHuman: {message.content}")
                 query = message.content
-        messages.insert(0, self.system_message)
+        messages.insert(0, updated_system_message)
         response = self.llm_with_tool.invoke(messages)
         lang_code = get_language_code(query)
         print(f"Detected language: {lang_code}")
