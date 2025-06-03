@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from fastapi.middleware.cors import CORSMiddleware
 from utils import prioritize_sources
-app = FastAPI()
+app = FastAPI(debug=True)
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
 genai.configure(api_key = os.environ['GOOGLE_API_KEY'])
 
@@ -46,12 +46,12 @@ async def store_docs(input_data: MultiDocInput):
 
 
 @app.get("/query")
-async def query_bot(question: str, thread_id: str):
+async def query_bot(question: str, thread_id: str, using_Twitter: bool = False):
     """
     Query the chatbot with a question, using a specific thread ID.
     """
     try:
-        input_data = {"messages": [HumanMessage(content=question)]}
+        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter}
         config = {"configurable": {"thread_id": thread_id}}
 
         # Invoke the workflow with the specified thread_id

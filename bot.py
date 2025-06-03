@@ -34,7 +34,7 @@ class MessagesState(TypedDict):
     tool_results: Optional[Dict[str, Any]] 
     tool_name: Optional[str]
     boom_results: Optional[Dict[str, Any]]  
-
+    isTwitterMsg: Optional[bool]  # Flag to indicate if the message is from Twitter
 
 # # Initialize tools
 article_tools = ArticleTools()
@@ -368,6 +368,13 @@ class chatbot:
     def result_agent(self, state: MessagesState) -> Dict:
         """Process all available information and provide a comprehensive response"""
         messages = state['messages']
+
+        isTwitterMsg = state.get('isTwitterMsg', False)
+        if isTwitterMsg:
+            print("Processing Twitter message")
+            # If it's a Twitter message, we might want to handle it differently
+            # For now, we will just proceed with the same logic
+            pass
         language_code = state.get('language_code', 'en')
         current_date = datetime.now().strftime("%B %d, %Y")
         
@@ -459,35 +466,70 @@ class chatbot:
 
         unique_sources = list(set(boom_sources))
 
-
-        # Build content for human message with conditional sections
-        human_content = f"""
-        Please provide a comprehensive answer to the user's query based on available information.
-        
-        User's query: {user_query}
-        """
-        
-        if formatted_boom_results:
-            human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
-        
-        if formatted_fact_checks:
-            human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
-        
-        human_content += f"""
-        
-        Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
-        Use emojis appropriately to make the response user-friendly.
-        Provide the response in language code: {language_code}
-        f"Note: Today's date is {current_date}."
-        Format your response with clear article citations:
-        **(Article Title Of Article):** Your summary here
-        
-        [Read more](Article URL here)
-        (Add a partition line like hr tag in markdown)
-        
-        Cite sources clearly, prioritizing BOOM articles first.
-        If no relevant information is available,don't acknowledge this limitation.
-        """
+        if isTwitterMsg:
+                # Twitter-specific prompt
+                human_content = f"""
+                Create a Twitter-friendly response to the user's query based on available information.
+                
+                User's query: {user_query}
+                """
+                
+                if formatted_boom_results:
+                    human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
+                
+                if formatted_fact_checks:
+                    human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
+                
+                human_content += f"""
+                
+                TWITTER RESPONSE REQUIREMENTS:
+                - Keep the response under 250 characters (Twitter's character limit)
+                - Use clear, concise language suitable for social media
+                - Include 1-2 relevant emojis to make it engaging
+                - NO markdown formatting (no **, [], (), etc.)
+                - Make it conversational and direct
+                - IMPORTANT: For URLs, use ONLY the raw URL (e.g., https://www.boomlive.in/article-url)
+                - DO NOT use markdown link format like [text](url) - Twitter doesn't support this
+                - Twitter will automatically shorten and make URLs clickable
+                - If including a source URL, ensure the COMPLETE raw URL fits within the 280 character limit
+                - If the content + full URL exceeds 280 characters, prioritize the URL and shorten the message
+                - Alternative: You can skip the source URL and focus on the key message if space is tight
+                - Provide the response in language code: {language_code}
+                - Focus on the most important facts only
+                - Make it shareable and engaging for Twitter audience
+                - Count characters carefully to ensure nothing gets cut off
+                
+                Note: Today's date is {current_date}.
+                """
+        else:
+            # Build content for human message with conditional sections
+            human_content = f"""
+            Please provide a comprehensive answer to the user's query based on available information.
+            
+            User's query: {user_query}
+            """
+            
+            if formatted_boom_results:
+                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
+            
+            if formatted_fact_checks:
+                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
+            
+            human_content += f"""
+            
+            Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
+            Use emojis appropriately to make the response user-friendly.
+            Provide the response in language code: {language_code}
+            f"Note: Today's date is {current_date}."
+            Format your response with clear article citations:
+            **(Article Title Of Article):** Your summary here
+            
+            [Read more](Article URL here)
+            (Add a partition line like hr tag in markdown)
+            
+            Cite sources clearly, prioritizing BOOM articles first.
+            If no relevant information is available,don't acknowledge this limitation.
+            """
         
         # Prepare input messages with system message included
         input_messages = [
