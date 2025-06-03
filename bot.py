@@ -491,8 +491,8 @@ class chatbot:
                 - IMPORTANT: For URLs, use ONLY the raw URL (e.g., https://www.boomlive.in/article-url)
                 - DO NOT use markdown link format like [text](url) - Twitter doesn't support this
                 - Twitter will automatically shorten and make URLs clickable
-                - If including a source URL, ensure the COMPLETE raw URL fits within the 280 character limit
-                - If the content + full URL exceeds 280 characters, prioritize the URL and shorten the message
+                - If including a source URL, ensure the COMPLETE raw URL fits within the 250 character limit
+                - If the content + full URL exceeds 250 characters, prioritize the URL and shorten the message
                 - Alternative: You can skip the source URL and focus on the key message if space is tight
                 - Provide the response in language code: {language_code}
                 - Focus on the most important facts only
