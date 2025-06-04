@@ -46,12 +46,12 @@ async def store_docs(input_data: MultiDocInput):
 
 
 @app.get("/query")
-async def query_bot(question: str, thread_id: str, using_Twitter: bool = False):
+async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, using_Whatsapp: bool = False):
     """
     Query the chatbot with a question, using a specific thread ID.
     """
     try:
-        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter}
+        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp}
         config = {"configurable": {"thread_id": thread_id}}
 
         # Invoke the workflow with the specified thread_id

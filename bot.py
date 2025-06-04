@@ -35,7 +35,7 @@ class MessagesState(TypedDict):
     tool_name: Optional[str]
     boom_results: Optional[Dict[str, Any]]  
     isTwitterMsg: Optional[bool]  # Flag to indicate if the message is from Twitter
-
+    isWhatsappMsg: Optional[bool]  # Flag to indicate if the message is from WhatsApp
 # # Initialize tools
 article_tools = ArticleTools()
 
@@ -370,11 +370,15 @@ class chatbot:
         messages = state['messages']
 
         isTwitterMsg = state.get('isTwitterMsg', False)
+        isWhatsappMsg = state.get('isWhatsappMsg', False)
+
         if isTwitterMsg:
             print("Processing Twitter message")
             # If it's a Twitter message, we might want to handle it differently
             # For now, we will just proceed with the same logic
             pass
+        elif isWhatsappMsg:
+            print("Processing WhatsApp message")
         language_code = state.get('language_code', 'en')
         current_date = datetime.now().strftime("%B %d, %Y")
         
@@ -501,6 +505,61 @@ class chatbot:
                 
                 Note: Today's date is {current_date}.
                 """
+
+
+        elif isWhatsappMsg:
+            # WhatsApp-specific prompt
+            human_content = f"""
+            Create a WhatsApp-friendly response to the user's query based on available information.
+            
+            User's query: {user_query}
+            """
+            
+            if formatted_boom_results:
+                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
+            
+            if formatted_fact_checks:
+                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
+            
+            human_content += f"""
+            
+            WHATSAPP RESPONSE REQUIREMENTS:
+            - Keep the response short and scannable (200-300 characters maximum)
+            - Use WhatsApp-friendly formatting that displays correctly:
+            * Use *bold text* for key points (asterisks work perfectly)
+            * Use _italics_ for subtle emphasis (underscores)
+            * Use simple bullet points (• or -)
+            * Use line breaks sparingly for better mobile readability
+            - Include 1-2 relevant emojis at the start for immediate context
+            - Make it conversational and easy to forward/share
+            - Prioritize the most important fact first
+            - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable)
+            - If multiple sources, include only the most credible one
+            - Provide the response in language code: {language_code}
+            - Focus on ONE key fact that directly answers the query
+            - Use friendly, personal messaging tone
+            - Keep sentences short and simple for mobile reading
+            - Avoid complex formatting or multiple sections
+            
+            OPTIMAL FORMATTING EXAMPLES:
+            
+            For fact-checks:
+            ✅ *Fact:* [Direct answer in 1-2 sentences]
+            
+            Source: [URL]
+            
+            For news updates:
+            📰 *Update:* [Key information]
+            
+            More: [URL]
+            
+            For explanations:
+            💡 *Quick Answer:* [Simple explanation]
+            
+            Details: [URL if needed]
+            
+            Note: Today's date is {current_date}.
+            """        
         else:
             # Build content for human message with conditional sections
             human_content = f"""
