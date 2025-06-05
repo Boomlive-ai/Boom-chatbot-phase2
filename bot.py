@@ -114,7 +114,7 @@ class chatbot:
                         # Format boom_results by tool type, limiting arrays to first 3 elements
                         if tool_name == "rag_search":
                             # For RAG search results
-                            sources_url = result.get("sources_url", [])[:3]  # First 3 URLs
+                            sources_url = result.get("sources_url", [])  # First 3 URLs
                             docs = result.get("sources_documents", [])[:3]   # First 3 documents
                             
                             # Extract and format document content to minimize tokens
@@ -399,7 +399,11 @@ class chatbot:
         boom_sources = []
         # Get BOOM results directly from state
         boom_results = state.get('boom_results', {})
-        
+        # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+        # print("boom_results:", boom_results)
+        # print("boom_sources:", boom_sources)
+        # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
         # Format the BOOM results for inclusion in the prompt if they exist
         formatted_boom_results = None
         if boom_results:
@@ -408,6 +412,9 @@ class chatbot:
                 rag_data = boom_results['rag_search']
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
+                if isTwitterMsg or isWhatsappMsg:
+                    sources_urls = sources_urls[:1]
+                    sources_docs = sources_docs[:1]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
@@ -428,6 +435,7 @@ class chatbot:
             
             elif tool_name in ['get_custom_date_range_articles', 'get_latest_articles'] and tool_name in boom_results:
                 sources_urls = boom_results[tool_name].get('sources_url', [])
+                # print("Sources URLs:", sources_urls, "inside result_agent")
                 if sources_urls:
                     boom_sources.extend(sources_urls)
                     formatted_boom_results = f"Sources:\n"
@@ -469,11 +477,11 @@ class chatbot:
             formatted_fact_checks = "\n\n".join(formatted_fact_checks)
 
         unique_sources = list(set(boom_sources))
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-        print("user_query:", user_query)
-        print("formatted_boom_results:", formatted_boom_results)
-        print("formatted_fact_checks:", formatted_fact_checks)
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        # print("user_query:", user_query)
+        # print("formatted_boom_results:", formatted_boom_results)
+        # print("formatted_fact_checks:", formatted_fact_checks)
+        # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         if isTwitterMsg:
                 # Twitter-specific prompt
                 human_content = f"""
@@ -603,7 +611,7 @@ class chatbot:
         # Generate the comprehensive response
         response = self.llm.invoke(input_messages)
         print("Result Agent generated a comprehensive response")
-        print("Unique sources:", unique_sources)
+        # print("Unique sources:", unique_sources)
         # Return the response to be added to the conversation
         return {"messages": [response], "sources_url": unique_sources}
    

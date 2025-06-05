@@ -6,6 +6,7 @@ import re, os
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles
+from utils import prioritize_sources
 
 class ArticleTools:
     def __init__(self):
@@ -22,7 +23,7 @@ class ArticleTools:
         - Broad or open-ended questions where semantic understanding is required (e.g., "What are RAG systems?", "Explain Retrieval Augmented Generation").
 
         **Parameters:**
-        - query: A string representing the user's search query without any changes in the query extract the user claim properly which includes keywords.
+        - query: Extract keywords from raw user input orignally recieved and make a query without missing any context from start.
         - language_code: A short code for the language of the query. Supported values are:
                 - "en" for English
                 - "hi" for Hindi
@@ -34,6 +35,11 @@ class ArticleTools:
         """
         print("Inside rag_search",query, language_code, original_message)
         query = original_message if original_message else query
+
+        # print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+        # print(f"Query: {query}, Language Code: {language_code}")
+        # print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+
         latest_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_LATEST_INDEX_NAME"),
             embedding=OpenAIEmbeddings(model="text-embedding-3-small")
@@ -94,7 +100,7 @@ class ArticleTools:
             print(f"Bangla documents retrieved: {len(bangla_docs)}")
 
         unique_sources = list(set(all_sources))
-
+        unique_sources = prioritize_sources(original_message, unique_sources)
         return {"sources_url": unique_sources, "sources_documents": all_docs}
         
 

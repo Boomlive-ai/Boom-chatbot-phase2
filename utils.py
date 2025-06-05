@@ -4,8 +4,9 @@ from langchain_core.messages import HumanMessage
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from langdetect import detect, LangDetectException
+from typing import List, Dict, Tuple, Optional
+from datetime import datetime
 
-    
 def get_language_code(text):
     """
     Detects language and returns ISO 639-1 two-letter language code.
@@ -293,6 +294,126 @@ def check_rag_relevance(query, sources_url, sources_documents, llm):
     return result == "True"
 
 
+def fetch_source_metadata(url: str) -> Dict:
+    """
+    Fetch metadata from a source URL including publication date, title, etc.
+    
+    Args:
+        url (str): The URL of the source.
+    
+    Returns:
+        dict: Dictionary containing metadata like publication_date, title, content
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code != 200:
+            return {"url": url, "error": f"HTTP {response.status_code}"}
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        metadata = {"url": url}
+        
+        # Extract publication date from various meta tags
+        pub_date = None
+        date_selectors = [
+            'meta[property="article:published_time"]',
+            'meta[name="article:published_time"]',
+            'meta[property="og:published_time"]',
+            'meta[name="published_time"]',
+            'meta[name="pubdate"]',
+            'meta[property="article:published"]',
+            'time[datetime]',
+            '.date',
+            '.published',
+            '.post-date'
+        ]
+        
+        for selector in date_selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    pub_date = element.get('content')
+                elif element.name == 'time':
+                    pub_date = element.get('datetime') or element.get_text()
+                else:
+                    pub_date = element.get_text()
+                
+                if pub_date:
+                    break
+        
+        # Parse and standardize the date
+        if pub_date:
+            try:
+                # Handle various date formats
+                parsed_date = parse_date_flexible(pub_date)
+                metadata["publication_date"] = parsed_date
+                metadata["publication_timestamp"] = parsed_date.timestamp() if parsed_date else None
+            except:
+                metadata["publication_date"] = None
+                metadata["publication_timestamp"] = None
+        else:
+            metadata["publication_date"] = None
+            metadata["publication_timestamp"] = None
+        
+        # Extract title
+        title_element = soup.find('title') or soup.select_one('meta[property="og:title"]') or soup.select_one('h1')
+        metadata["title"] = title_element.get('content') if title_element and title_element.name == 'meta' else (title_element.get_text().strip() if title_element else "")
+        
+        # Extract content (first few paragraphs)
+        paragraphs = soup.find_all("p")
+        content = " ".join([p.get_text().strip() for p in paragraphs[:5] if p.get_text().strip()])
+        metadata["content"] = content
+        
+        # Extract description
+        desc_element = soup.select_one('meta[name="description"]') or soup.select_one('meta[property="og:description"]')
+        metadata["description"] = desc_element.get('content') if desc_element else ""
+        
+        return metadata
+        
+    except Exception as e:
+        print(f"Error fetching metadata from {url}: {e}")
+        return {"url": url, "error": str(e)}
+
+def parse_date_flexible(date_string: str) -> Optional[datetime]:
+    """
+    Parse date string in various formats commonly found in web pages.
+    """
+    if not date_string:
+        return None
+    
+    # Clean the date string
+    date_string = date_string.strip()
+    
+    # Common date formats to try
+    formats = [
+        "%Y-%m-%dT%H:%M:%S%z",      # 2023-04-04T17:47:55+05:30
+        "%Y-%m-%dT%H:%M:%S",        # 2023-04-04T17:47:55
+        "%Y-%m-%d %H:%M:%S",        # 2023-04-04 17:47:55
+        "%Y-%m-%d",                 # 2023-04-04
+        "%d/%m/%Y",                 # 04/04/2023
+        "%m/%d/%Y",                 # 04/04/2023
+        "%B %d, %Y",                # April 4, 2023
+        "%d %B %Y",                 # 4 April 2023
+        "%Y-%m-%dT%H:%M:%SZ",       # 2023-04-04T17:47:55Z
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_string, fmt)
+        except ValueError:
+            continue
+    
+    # Try parsing with regex for flexible matching
+    try:
+        # Extract date components using regex
+        date_match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', date_string)
+        if date_match:
+            year, month, day = map(int, date_match.groups())
+            return datetime(year, month, day)
+    except:
+        pass
+    
+    return None
 
 def fetch_source_content(url):
     """
@@ -313,6 +434,7 @@ def fetch_source_content(url):
 
         # Extract the main content (customize based on website structure)
         paragraphs = soup.find_all("p")  # Get all paragraph tags
+        print(f"Found {len(paragraphs)} paragraphs in {url}")
         content = " ".join([p.get_text() for p in paragraphs[:5]])  # Get first 5 paragraphs
 
         return content.strip()
@@ -322,46 +444,169 @@ def fetch_source_content(url):
         return ""
 
 
-def prioritize_sources(user_query: str, sources: list, response_text: str=None) -> list:
+# def prioritize_sources(user_query: str, sources: list, response_text: str=None) -> list:
+#     """
+#     Reorder sources based on similarity with user query and response text.
+    
+#     Args:
+#         user_query (str): The original user question
+#         response_text (str): The generated response content
+#         sources (list): List of source URLs to prioritize
+        
+#     Returns:
+#         list: Reordered list of sources with priority based on relevance
+#     """
+#     if not user_query or not response_text or not sources:
+#         return sources  # Return as-is if missing data
+
+#     # Extract source IDs (assuming format ends in `-<number>`)
+#     def extract_id(url):
+#         try:
+#             return int(url.rstrip('/').split('-')[-1])
+#         except (ValueError, IndexError):
+#             return 0
+
+#     # Fetch source content snippets (assuming we have a way to extract them)
+#     source_texts = [fetch_source_content(url) for url in sources]  # Implement fetch_source_content function
+    
+#     # Prepare text inputs for similarity calculation
+#     texts = [user_query, response_text] + source_texts  # First two are query and response
+
+#     # Compute TF-IDF similarity
+#     vectorizer = TfidfVectorizer(stop_words="english")
+#     tfidf_matrix = vectorizer.fit_transform(texts)
+
+#     # Compute similarity scores
+#     query_similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[2:]).flatten()  # Query vs Sources
+#     response_similarities = cosine_similarity(tfidf_matrix[1:2], tfidf_matrix[2:]).flatten()  # Response vs Sources
+
+#     # Combine scores (weighted sum, adjust weights if needed)
+#     combined_scores = 0.6 * query_similarities + 0.4 * response_similarities
+
+#     # Sort sources based on combined similarity score
+#     sorted_sources = [x for _, x in sorted(zip(combined_scores, sources), key=lambda pair: pair[0], reverse=True)]
+
+#     return sorted_sources
+
+def fetch_and_sort_by_date(sources: list) -> list:
     """
-    Reorder sources based on similarity with user query and response text.
+    Fetch metadata for sources and sort them by publication date (latest first).
     
     Args:
-        user_query (str): The original user question
-        response_text (str): The generated response content
-        sources (list): List of source URLs to prioritize
+        sources (list): List of source URLs
+        
+    Returns:
+        list: Sources sorted by publication date (latest first)
+    """
+    sources_with_dates = []
+    
+    for source_url in sources:
+        try:
+            # Use existing fetch_source_metadata function
+            metadata = fetch_source_metadata(source_url)
+            pub_date = metadata.get('publication_date')
+            
+            if pub_date:
+                sources_with_dates.append((source_url, pub_date))
+                print(f"Found date for {source_url}: {pub_date}")
+            else:
+                # If no date found, assign a very old date to push it to the end
+                sources_with_dates.append((source_url, datetime.min))
+                print(f"No date found for {source_url}, using minimum date")
+                
+        except Exception as e:
+            print(f"Error fetching metadata for {source_url}: {e}")
+            sources_with_dates.append((source_url, datetime.min))
+    
+    # Sort by publication date (latest first)
+    sources_with_dates.sort(key=lambda x: x[1], reverse=True)
+    
+    # Extract just the URLs in sorted order
+    sorted_sources = [source[0] for source in sources_with_dates]
+    
+    print(f"Sorted {len(sorted_sources)} sources by publication date")
+    return sorted_sources
+
+
+def prioritize_sources(user_query: str, sources: list, response_text: str = None) -> list:
+    """
+    Reorder sources based on similarity with user query and optionally with response text.
+    
+    Args:
+        user_query (str): The original user question/query
+        sources (list): List of source URLs or source objects to prioritize
+        response_text (str, optional): The generated response content. If not provided,
+                                     prioritization will be based solely on user query similarity.
         
     Returns:
         list: Reordered list of sources with priority based on relevance
     """
-    if not user_query or not response_text or not sources:
-        return sources  # Return as-is if missing data
-
-    # Extract source IDs (assuming format ends in `-<number>`)
-    def extract_id(url):
-        try:
-            return int(url.rstrip('/').split('-')[-1])
-        except (ValueError, IndexError):
-            return 0
-
-    # Fetch source content snippets (assuming we have a way to extract them)
-    source_texts = [fetch_source_content(url) for url in sources]  # Implement fetch_source_content function
     
-    # Prepare text inputs for similarity calculation
-    texts = [user_query, response_text] + source_texts  # First two are query and response
+    # Return original order if essential data is missing
+    if not user_query or not sources:   
+        return sources
+    
+    try:
+        sources = fetch_and_sort_by_date(sources)
 
-    # Compute TF-IDF similarity
-    vectorizer = TfidfVectorizer(stop_words="english")
-    tfidf_matrix = vectorizer.fit_transform(texts)
-
-    # Compute similarity scores
-    query_similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[2:]).flatten()  # Query vs Sources
-    response_similarities = cosine_similarity(tfidf_matrix[1:2], tfidf_matrix[2:]).flatten()  # Response vs Sources
-
-    # Combine scores (weighted sum, adjust weights if needed)
-    combined_scores = 0.6 * query_similarities + 0.4 * response_similarities
-
-    # Sort sources based on combined similarity score
-    sorted_sources = [x for _, x in sorted(zip(combined_scores, sources), key=lambda pair: pair[0], reverse=True)]
-
-    return sorted_sources
+        # Extract source content for similarity comparison
+        source_texts = []
+        for source in sources:
+            content = fetch_source_content(source)
+            source_texts.append(content if content else "")
+        
+        # Filter out sources with no content
+        valid_sources = [(i, source, text) for i, (source, text) in enumerate(zip(sources, source_texts)) if text.strip()]
+        
+        if not valid_sources:
+            return sources  # Return original if no valid content found
+        
+        # Prepare texts for vectorization
+        valid_indices, valid_source_list, valid_texts = zip(*valid_sources)
+        
+        # Create text corpus for TF-IDF
+        if response_text and response_text.strip():
+            # Use both query and response for similarity calculation
+            all_texts = [user_query, response_text] + list(valid_texts)
+            
+            # Compute TF-IDF matrix
+            vectorizer = TfidfVectorizer(stop_words="english", max_features=1000)
+            tfidf_matrix = vectorizer.fit_transform(all_texts)
+            
+            # Calculate similarities
+            query_similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[2:]).flatten()
+            response_similarities = cosine_similarity(tfidf_matrix[1:2], tfidf_matrix[2:]).flatten()
+            
+            # Combine scores with weighted approach
+            # Higher weight for query similarity as it's the primary intent
+            combined_scores = 0.7 * query_similarities + 0.3 * response_similarities
+            
+        else:
+            # Use only query for similarity calculation when response is not provided
+            all_texts = [user_query] + list(valid_texts)
+            
+            # Compute TF-IDF matrix
+            vectorizer = TfidfVectorizer(stop_words="english", max_features=1000)
+            tfidf_matrix = vectorizer.fit_transform(all_texts)
+            
+            # Calculate similarity only with query
+            combined_scores = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+        
+        # Create tuples of (score, original_index, source) for sorting
+        scored_sources = list(zip(combined_scores, valid_indices, valid_source_list))
+        
+        # Sort by similarity score (descending)
+        scored_sources.sort(key=lambda x: x[0], reverse=True)
+        
+        # Extract sorted sources
+        prioritized_sources = [source for _, _, source in scored_sources]
+        
+        # Add back any sources that had no content at the end
+        remaining_sources = [sources[i] for i in range(len(sources)) if i not in valid_indices]
+        prioritized_sources.extend(remaining_sources)
+        
+        return prioritized_sources
+        
+    except Exception as e:
+        print(f"Error in prioritize_sources: {e}")
+        return sources  # Return original order on error
