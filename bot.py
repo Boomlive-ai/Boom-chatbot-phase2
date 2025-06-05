@@ -469,7 +469,11 @@ class chatbot:
             formatted_fact_checks = "\n\n".join(formatted_fact_checks)
 
         unique_sources = list(set(boom_sources))
-
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        print("user_query:", user_query)
+        print("formatted_boom_results:", formatted_boom_results)
+        print("formatted_fact_checks:", formatted_fact_checks)
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         if isTwitterMsg:
                 # Twitter-specific prompt
                 human_content = f"""
