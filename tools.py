@@ -12,7 +12,7 @@ class ArticleTools:
         pass
     @staticmethod
     @tool
-    def rag_search(query: str, language_code: str) -> str:
+    def rag_search(query: str, language_code: str, original_message: str = None) -> str:
         """
         This tool performs semantic searches across articles to find relevant information that matches the user's query based on meaning rather than keywords.
 
@@ -27,11 +27,13 @@ class ArticleTools:
                 - "en" for English
                 - "hi" for Hindi
                 - "bn" for Bangla
+        - original_message: A string containing the complete, unprocessed, raw user input as it was originally received, including any formatting, extra text, social media handles, timestamps, or contextual information that may have been stripped during query processing. This preserves the full context of what the user actually typed or sent.
 
         **Returns:**
         - Article content semantically related to the query, providing relevant information or fact-based insights.
         """
-        print("Inside rag_search",query, language_code)
+        print("Inside rag_search",query, language_code, original_message)
+        query = original_message if original_message else query
         latest_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_LATEST_INDEX_NAME"),
             embedding=OpenAIEmbeddings(model="text-embedding-3-small")
