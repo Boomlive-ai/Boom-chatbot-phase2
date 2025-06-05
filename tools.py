@@ -22,7 +22,7 @@ class ArticleTools:
         - Broad or open-ended questions where semantic understanding is required (e.g., "What are RAG systems?", "Explain Retrieval Augmented Generation").
 
         **Parameters:**
-        - query: A string representing the user's search query without any changes in the query.
+        - query: A string representing the user's search query without any changes in the query extract the user claim properly which includes keywords.
         - language_code: A short code for the language of the query. Supported values are:
                 - "en" for English
                 - "hi" for Hindi
