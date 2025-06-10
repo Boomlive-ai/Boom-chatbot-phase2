@@ -383,7 +383,10 @@ class chatbot:
         current_date = datetime.now().strftime("%B %d, %Y")
         
         if (state.get('used_google_fact_check', False) == True and state.get('fact_check_results', {}) == {}):
-            return {"messages": "Not Found"}
+            if isTwitterMsg or isWhatsappMsg:
+                pass  # Do nothing, just process
+            else:
+                return {"messages": "Not Found"}
         
         # Extract the user's query
         user_query = None
@@ -514,7 +517,7 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                
+                - If there’s no relevant article, acknowledge that the claim has not been fact-checked yet by BOOM and guide users to https://boomlive.in/fact-check for more fact checks.
                 Note: Today's date is {current_date}.
                 """
 
@@ -552,7 +555,8 @@ class chatbot:
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
             - Avoid complex formatting or multiple sections
-            
+            - If there’s no relevant article, acknowledge that the claim has not been fact-checked yet by BOOM and guide users to https://boomlive.in/fact-check for more fact checks.
+
             OPTIMAL FORMATTING EXAMPLES:
             
             For fact-checks:
