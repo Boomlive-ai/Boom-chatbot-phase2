@@ -416,8 +416,8 @@ class chatbot:
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:5]
-                    sources_docs = sources_docs[:5]
+                    sources_urls = sources_urls[:1]
+                    sources_docs = sources_docs[:1]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
@@ -517,7 +517,7 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                - If there’s no relevant article, acknowledge that the claim has not been fact-checked yet by BOOM and guide users to https://boomlive.in/fact-check for more fact checks.
+                
                 Note: Today's date is {current_date}.
                 """
 
@@ -555,8 +555,7 @@ class chatbot:
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
             - Avoid complex formatting or multiple sections
-            - If there’s no relevant article, acknowledge that the claim has not been fact-checked yet by BOOM and guide users to https://boomlive.in/fact-check for more fact checks.
-
+            
             OPTIMAL FORMATTING EXAMPLES:
             
             For fact-checks:
