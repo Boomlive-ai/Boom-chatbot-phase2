@@ -383,10 +383,7 @@ class chatbot:
         current_date = datetime.now().strftime("%B %d, %Y")
         
         if (state.get('used_google_fact_check', False) == True and state.get('fact_check_results', {}) == {}):
-            if isTwitterMsg or isWhatsappMsg:
-                pass  # Do nothing, just process
-            else:
-                return {"messages": "Not Found"}
+            return {"messages": "Not Found"}
         
         # Extract the user's query
         user_query = None
@@ -416,8 +413,8 @@ class chatbot:
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:5]
-                    sources_docs = sources_docs[:5]
+                    sources_urls = sources_urls[:1]
+                    sources_docs = sources_docs[:1]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
