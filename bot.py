@@ -416,8 +416,8 @@ class chatbot:
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:1]
-                    sources_docs = sources_docs[:1]
+                    sources_urls = sources_urls[:5]
+                    sources_docs = sources_docs[:5]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
