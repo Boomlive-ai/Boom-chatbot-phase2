@@ -383,7 +383,10 @@ class chatbot:
         current_date = datetime.now().strftime("%B %d, %Y")
         
         if (state.get('used_google_fact_check', False) == True and state.get('fact_check_results', {}) == {}):
-            return {"messages": "Not Found"}
+            if isTwitterMsg or isWhatsappMsg:
+                pass  # Do nothing, just process
+            else:
+                return {"messages": "Not Found"}
         
         # Extract the user's query
         user_query = None
@@ -413,8 +416,8 @@ class chatbot:
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:1]
-                    sources_docs = sources_docs[:1]
+                    sources_urls = sources_urls[:5]
+                    sources_docs = sources_docs[:5]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
@@ -514,7 +517,6 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                
                 Note: Today's date is {current_date}.
                 """
 
@@ -552,7 +554,6 @@ class chatbot:
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
             - Avoid complex formatting or multiple sections
-            
             OPTIMAL FORMATTING EXAMPLES:
             
             For fact-checks:
@@ -601,7 +602,7 @@ class chatbot:
             Cite sources clearly, prioritizing BOOM articles first.
             If no relevant information is available,don't acknowledge this limitation.
             """
-        
+        print("Human content prepared for LLM invocation", human_content)
         # Prepare input messages with system message included
         input_messages = [
             self.system_message,

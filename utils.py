@@ -434,7 +434,7 @@ def fetch_source_content(url):
 
         # Extract the main content (customize based on website structure)
         paragraphs = soup.find_all("p")  # Get all paragraph tags
-        print(f"Found {len(paragraphs)} paragraphs in {url}")
+        # print(f"Found {len(paragraphs)} paragraphs in {url}")
         content = " ".join([p.get_text() for p in paragraphs[:5]])  # Get first 5 paragraphs
 
         return content.strip()
@@ -508,11 +508,11 @@ def fetch_and_sort_by_date(sources: list) -> list:
             
             if pub_date:
                 sources_with_dates.append((source_url, pub_date))
-                print(f"Found date for {source_url}: {pub_date}")
+                # print(f"Found date for {source_url}: {pub_date}")
             else:
                 # If no date found, assign a very old date to push it to the end
                 sources_with_dates.append((source_url, datetime.min))
-                print(f"No date found for {source_url}, using minimum date")
+                # print(f"No date found for {source_url}, using minimum date")
                 
         except Exception as e:
             print(f"Error fetching metadata for {source_url}: {e}")
