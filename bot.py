@@ -517,6 +517,7 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
+                - If the news is not verified then provide a response that says "This news is not verified yet, please check back later for updates" and provide this link https://boomlive.in/fact-check
                 Note: Today's date is {current_date}.
                 """
 
@@ -554,6 +555,8 @@ class chatbot:
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
             - Avoid complex formatting or multiple sections
+            - If the news is not verified then provide a response that says "This news is not verified yet, please check back later for updates" and provide this link https://boomlive.in/fact-check
+
             OPTIMAL FORMATTING EXAMPLES:
             
             For fact-checks:
