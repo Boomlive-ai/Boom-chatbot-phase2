@@ -6,7 +6,7 @@ import google.generativeai as genai
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from fastapi.middleware.cors import CORSMiddleware
-from utils import prioritize_sources,check_boom_verification_status
+from utils import prioritize_sources,check_boom_verification_status,store_unverified_content_to_sheets,test_google_sheets_manually
 app = FastAPI(debug=True)
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
 genai.configure(api_key = os.environ['GOOGLE_API_KEY'])
@@ -101,6 +101,21 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
                         print(f"  Tool Call: {tool_call['name']}({tool_call['args']})")
 
         sources = prioritize_sources(question, sources_url, result)
+
+        # Store unverified content in Google Sheets
+        if not isBoomVerified:
+            print("⚠️  CONTENT NOT VERIFIED - Storing in Google Sheets...")
+            await store_unverified_content_to_sheets(
+                question=question,
+                response=result,
+                thread_id=thread_id,
+                fact_check_results=fact_check_results,
+                sources=sources[:3],
+                using_Twitter=using_Twitter,
+                using_Whatsapp=using_Whatsapp
+            )
+        else:
+            print("✅ CONTENT VERIFIED - Not storing in Google Sheets")
         response_payload = {
             "status": "success",
             "thread_id": thread_id,
@@ -115,6 +130,19 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
         raise HTTPException(status_code=404, detail="Thread ID not found.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# @app.get("/test-google-sheets")
+# async def test_google_sheets_endpoint():
+#     """Test endpoint to manually trigger Google Sheets storage"""
+#     try:
+#         success = await test_google_sheets_manually()
+#         return {
+#             "status": "success" if success else "failed",
+#             "message": "Check your Google Drive for 'Unverified Content Tracker' spreadsheet" if success else "Test failed - check server logs"
+#         }
+#     except Exception as e:
+#         return {"status": "error", "message": str(e)}
 
 @app.get("/")
 async def root():

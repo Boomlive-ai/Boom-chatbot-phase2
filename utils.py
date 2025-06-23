@@ -663,3 +663,136 @@ def check_boom_verification_status(response_content: str) -> bool:
     
     # If no unverified patterns found, assume it's verified
     return True
+
+
+import requests
+import json
+from datetime import datetime
+from typing import Dict, Any, Optional
+
+async def store_unverified_content_to_sheets(
+    question: str, 
+    response: str, 
+    thread_id: str, 
+    fact_check_results: Optional[Dict] = None,
+    sources: Optional[list] = None,
+    using_Twitter: bool = False,
+    using_Whatsapp: bool = False
+):
+    """
+    Store unverified content to Google Sheets via Google Apps Script Web App
+    """
+    
+    # Your Google Apps Script Web App URL
+    GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7KHK82a1x2OvU8bX6G5Phny7PE9TKmNbexLyk0rqHcHvpL7Pgx2DVkQ5SpPQItVVEpQ/exec"
+    
+    # Determine platform
+    platform = "API"
+    if using_Twitter:
+        platform = "Twitter"
+    elif using_Whatsapp:
+        platform = "WhatsApp"
+    
+    # Prepare data to send
+    data = {
+        "timestamp": datetime.now().isoformat(),
+        "thread_id": thread_id,
+        "question": question,
+        "response": response,
+        "is_verified": False,
+        "fact_check_results": json.dumps(fact_check_results) if fact_check_results else "",
+        "sources": json.dumps(sources) if sources else "",
+        "platform": platform
+    }
+    
+    print("🔄 STORING UNVERIFIED CONTENT TO GOOGLE SHEETS")
+    print("=" * 60)
+    print(f"📅 Timestamp: {data['timestamp']}")
+    print(f"🧵 Thread ID: {data['thread_id']}")
+    print(f"❓ Question: {data['question'][:100]}{'...' if len(data['question']) > 100 else ''}")
+    print(f"💬 Response: {data['response'][:100]}{'...' if len(data['response']) > 100 else ''}")
+    print(f"🔍 Is Verified: {data['is_verified']}")
+    print(f"📊 Platform: {data['platform']}")
+    print(f"🔗 Sources Count: {len(sources) if sources else 0}")
+    print(f"🎯 Fact Check Results: {'Present' if fact_check_results else 'None'}")
+    print("=" * 60)
+    
+    try:
+        print(f"📤 Sending POST request to: {GOOGLE_SCRIPT_URL}")
+        print(f"📋 Payload size: {len(json.dumps(data))} characters")
+        
+        # Send POST request to Google Apps Script
+        http_response = requests.post(
+            GOOGLE_SCRIPT_URL,
+            json=data,
+            headers={'Content-Type': 'application/json'},
+            timeout=15
+        )
+        
+        print(f"📊 HTTP Status Code: {http_response.status_code}")
+        print(f"📄 Response Headers: {dict(http_response.headers)}")
+        print(f"📝 Response Content: {http_response.text}")
+        
+        if http_response.status_code == 200:
+            try:
+                response_json = http_response.json()
+                print(f"✅ JSON Response: {response_json}")
+                
+                if response_json.get('status') == 'success':
+                    print(f"🎉 SUCCESS! Data stored in Google Sheets")
+                    print(f"📍 Row number: {response_json.get('row', 'Unknown')}")
+                    print(f"💾 Thread {thread_id} data saved successfully!")
+                    return True
+                else:
+                    print(f"❌ SCRIPT ERROR: {response_json.get('message', 'Unknown error')}")
+                    return False
+                    
+            except json.JSONDecodeError as je:
+                print(f"⚠️ Response is not valid JSON: {je}")
+                print(f"📄 Raw response: {http_response.text}")
+                return False
+                
+        else:
+            print(f"❌ HTTP ERROR: Status {http_response.status_code}")
+            print(f"📄 Error response: {http_response.text}")
+            return False
+            
+    except requests.exceptions.Timeout:
+        print("⏰ TIMEOUT ERROR: Request took too long (15 seconds)")
+        return False
+    except requests.exceptions.ConnectionError as ce:
+        print(f"🌐 CONNECTION ERROR: {str(ce)}")
+        return False
+    except requests.exceptions.RequestException as re:
+        print(f"📡 REQUEST ERROR: {str(re)}")
+        return False
+    except Exception as e:
+        print(f"💥 UNEXPECTED ERROR: {str(e)}")
+        print(f"🔍 Error type: {type(e).__name__}")
+        return False
+    finally:
+        print("🏁 Google Sheets operation completed")
+        print("=" * 60)
+
+# Test function to manually trigger the Google Sheets storage
+async def test_google_sheets_manually():
+    """Manual test function"""
+    print("🧪 MANUAL TEST: Storing test data to Google Sheets")
+    
+    success = await store_unverified_content_to_sheets(
+        question="This is a manual test question to verify Google Sheets integration is working properly.",
+        response="This is a test response that should be stored in Google Sheets because it's marked as unverified content for testing purposes.",
+        thread_id="manual_test_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        fact_check_results={"test_claim": "This is test fact check data", "confidence": 0.85},
+        sources=["https://example.com/test1", "https://example.com/test2"],
+        using_Twitter=False,
+        using_Whatsapp=False
+    )
+    
+    if success:
+        print("🎉 Manual test completed successfully!")
+        print("📊 Check your Google Drive for 'Unverified Content Tracker' spreadsheet")
+    else:
+        print("❌ Manual test failed - check error messages above")
+    
+    return success
