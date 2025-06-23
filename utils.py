@@ -610,3 +610,56 @@ def prioritize_sources(user_query: str, sources: list, response_text: str = None
     except Exception as e:
         print(f"Error in prioritize_sources: {e}")
         return sources  # Return original order on error
+
+import re
+
+def check_boom_verification_status(response_content: str) -> bool:
+    """
+    Check if the response content contains verified BOOM information or unverified claims.
+    
+    Args:
+        response_content (str): The response text to analyze
+        
+    Returns:
+        bool: True if content is verified by BOOM, False if unverified
+    """
+    if not response_content or not isinstance(response_content, str):
+        return False
+    
+    # Patterns that indicate unverified information
+    unverified_patterns = [
+        "has not been verified by BOOM",
+        "Our team is reviewing it", 
+        "avoid sharing unverified information",
+        "please avoid sharing unverified information",
+        "not been verified by boom",  # lowercase variant
+        "team is reviewing it",       # partial match
+        "unverified information"      # general pattern
+    ]
+    
+    # Check if response contains any unverified patterns
+    response_lower = response_content.lower()
+    contains_unverified_pattern = any(pattern.lower() in response_lower for pattern in unverified_patterns)
+    
+    if contains_unverified_pattern:
+        print("Found unverified information patterns in response")
+        
+        # Additional check for URL type if unverified patterns are found
+        if "boomlive.in/fact-check" in response_lower:
+            # Check if it's the generic URL (ends with just /fact-check)
+            generic_url_pattern = r'https?://(?:www\.)?boomlive\.in/fact-check(?:\s|$|[^\w/-])'
+            
+            if re.search(generic_url_pattern, response_content, re.IGNORECASE):
+                print("Response contains unverified information with generic fact-check URL")
+                return False
+            
+            # If it contains specific fact-check article URLs, it's verified
+            elif re.search(r'boomlive\.in/fact-check/[\w-]+', response_content, re.IGNORECASE):
+                print("Response contains specific fact-check article URL - keeping as verified")
+                return True
+        
+        # If unverified patterns found but no boomlive URL, it's still unverified
+        return False
+    
+    # If no unverified patterns found, assume it's verified
+    return True

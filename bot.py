@@ -520,6 +520,8 @@ class chatbot:
                 - If the news is not verified then provide a response that says:
                     "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
                     and provide this link https://boomlive.in/fact-check 
+                - If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
+
                 Note: Today's date is {current_date}.
                 """
 
@@ -560,7 +562,7 @@ class chatbot:
             - If the news is not verified then provide a response that says:
                 "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
                 and provide this link https://boomlive.in/fact-check
-
+            If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
             OPTIMAL FORMATTING EXAMPLES:
             
             For fact-checks:

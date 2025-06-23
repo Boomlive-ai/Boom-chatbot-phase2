@@ -6,7 +6,7 @@ import google.generativeai as genai
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from fastapi.middleware.cors import CORSMiddleware
-from utils import prioritize_sources
+from utils import prioritize_sources,check_boom_verification_status
 app = FastAPI(debug=True)
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
 genai.configure(api_key = os.environ['GOOGLE_API_KEY'])
@@ -84,6 +84,7 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
                     sources_url.extend(urls)
         
         result = response["messages"][-1].content
+        isBoomVerified = check_boom_verification_status(result)
 
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         print(f"FACT CHECK RESULTS: {response['fact_check_results']}")
@@ -105,6 +106,7 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
             "thread_id": thread_id,
             "response": result,
             "sources": sources[:3],
+            "isBoomVerified": isBoomVerified,
         }
         if used_google_fact_check and fact_check_results:
             response_payload["fact_check_results"] = fact_check_results
