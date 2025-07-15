@@ -587,7 +587,21 @@ class chatbot:
             human_content += f"""
 
             CRITICAL: You are a FACT-CHECK BOT ONLY. You MUST NOT answer general knowledge questions.
+            CRITICAL INSTRUCTION FOR SEARCH RESULTS:
+            - ONLY use search results that DIRECTLY address the user's specific claim
+            - If search results are about the same person/topic but NOT about the specific claim, treat as "not verified"
+            - Example: If user asks "Did [person] die?" but search results are about their movies/career, respond with "not verified"
+            - NEVER provide links to articles that don't specifically fact-check the user's exact claim
             
+            RESPONSE LOGIC:
+            1. Check if search results directly address the user's claim
+            2. If YES: Provide fact-check response with relevant article link
+            3. If NO: Use standard "not verified" response
+
+            FOR IRRELEVANT RESULTS, respond with:
+            The claim about "{user_query}" has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information.
+            
+            https://boomlive.in/fact-check
             MANDATORY FILTERING - REJECT these query types with standard response:
             - "Who is [person]?" → REJECT
             - "Who is Rahul gandhi?" → REJECT
