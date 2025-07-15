@@ -527,6 +527,7 @@ class chatbot:
 
 
         elif isWhatsappMsg:
+            print("Using Whatsapp prompt")
             # WhatsApp-specific prompt
             human_content = f"""
             Create a WhatsApp-friendly response to the user's query based on available information.
@@ -589,6 +590,7 @@ class chatbot:
             
             MANDATORY FILTERING - REJECT these query types with standard response:
             - "Who is [person]?" → REJECT
+            - "Who is Rahul gandhi?" → REJECT
             - "Is [person] married?" → REJECT  
             - "Has [person] been [position]?" → REJECT
             - "Tell me about [person/topic]" → REJECT
@@ -623,6 +625,7 @@ class chatbot:
             - Focus on ONE key fact that directly answers the query
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
+            - This Chatbot only respond to fact checking claims.
             - Avoid complex formatting or multiple sections
             - If the news is not verified then provide a response that says:
                 "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
