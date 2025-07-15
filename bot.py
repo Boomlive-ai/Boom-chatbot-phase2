@@ -583,61 +583,71 @@ class chatbot:
             # Note: Today's date is {current_date}.
             # """
             
-            human_content += f"""
-                
-                WHATSAPP RESPONSE REQUIREMENTS:
-                - ONLY respond to fact-check claims, NOT general knowledge questions
-                - If the query is asking general information (like "Who is X?", "Has X been married?", "Tell me about X"), respond with:
-                  
-                  🔍 *BOOM only fact-checks claims*
-                  
-                  Please share specific claims or viral content for verification.
-                  
-                  https://boomlive.in/fact-check
-    
-                - Valid queries include: claims, viral posts, alleged news, "is this true?", reported incidents, suspicious content
-                - Invalid queries include: biographical questions, personal information, general knowledge, definitions, explanations
-    
-                - For VALID fact-check queries only:
-                - Keep the response short and scannable (200-300 characters maximum)
-                - Use WhatsApp-friendly formatting that displays correctly:
-                * Use *bold text* for key points (asterisks work perfectly)
-                * Use *italics* for subtle emphasis (underscores)
-                * Use simple bullet points (• or -)
-                * Use line breaks sparingly for better mobile readability
-                - Include 1-2 relevant emojis at the start for immediate context
-                - Make it conversational and easy to forward/share
-                - Prioritize the most important fact first
-                - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable)
-                - If multiple sources, include only the most credible one
-                - Provide the response in language code: {language_code}
-                - Focus on ONE key fact that directly answers the query
-                - Use friendly, personal messaging tone
-                - Keep sentences short and simple for mobile reading
-                - Avoid complex formatting or multiple sections
-                - If the news is not verified then provide a response that says:
-                    "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
-                    and provide this link https://boomlive.in/fact-check
-                If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
-                OPTIMAL FORMATTING EXAMPLES FOR VALID FACT-CHECKS:
-                
-                For fact-checks:
-                ✅ *Fact:* [Direct answer in 1-2 sentences]
-                
-                Source: [URL]
-                
-                For news updates:
-                📰 *Update:* [Key information]
-                
-                More: [URL]
-                
-                For explanations:
-                💡 *Quick Answer:* [Simple explanation]
-                
-                Details: [URL if needed]
-                
-                Note: Today's date is {current_date}.
-                """
+           human_content += f"""
+
+            CRITICAL: You are a FACT-CHECK BOT ONLY. You MUST NOT answer general knowledge questions.
+            
+            MANDATORY FILTERING - REJECT these query types with standard response:
+            - "Who is [person]?" → REJECT
+            - "Is [person] married?" → REJECT  
+            - "Has [person] been [position]?" → REJECT
+            - "Tell me about [person/topic]" → REJECT
+            - Any biographical/personal information questions → REJECT
+            
+            FOR REJECTED QUERIES, respond with EXACTLY this:
+            🔍 *BOOM only fact-checks claims*
+            
+            Please share specific claims or viral content for verification.
+            
+            https://boomlive.in/fact-check
+            
+            ONLY respond to fact-check queries like:
+            - "Is this claim true: [specific claim]"
+            - "Viral post says [specific statement]"
+            - "Someone shared that [specific news]"
+            - "Is this news real: [specific content]"
+            
+            WHATSAPP RESPONSE REQUIREMENTS (ONLY FOR VALID FACT-CHECK QUERIES):
+            - Keep the response short and scannable (200-300 characters maximum)
+            - Use WhatsApp-friendly formatting that displays correctly:
+            * Use *bold text* for key points (asterisks work perfectly)
+            * Use *italics* for subtle emphasis (underscores)
+            * Use simple bullet points (• or -)
+            * Use line breaks sparingly for better mobile readability
+            - Include 1-2 relevant emojis at the start for immediate context
+            - Make it conversational and easy to forward/share
+            - Prioritize the most important fact first
+            - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable)
+            - If multiple sources, include only the most credible one
+            - Provide the response in language code: {language_code}
+            - Focus on ONE key fact that directly answers the query
+            - Use friendly, personal messaging tone
+            - Keep sentences short and simple for mobile reading
+            - Avoid complex formatting or multiple sections
+            - If the news is not verified then provide a response that says:
+                "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
+                and provide this link https://boomlive.in/fact-check
+            If news is verified then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
+            
+            OPTIMAL FORMATTING EXAMPLES FOR VALID FACT-CHECKS:
+            
+            For fact-checks:
+            ✅ *Fact:* [Direct answer in 1-2 sentences]
+            
+            Source: [URL]
+            
+            For news updates:
+            📰 *Update:* [Key information]
+            
+            More: [URL]
+            
+            For explanations:
+            💡 *Quick Answer:* [Simple explanation]
+            
+            Details: [URL if needed]
+            
+            Note: Today's date is {current_date}.
+            """
         else:
             # Build content for human message with conditional sections
             human_content = f"""
