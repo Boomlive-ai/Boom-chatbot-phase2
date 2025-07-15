@@ -583,7 +583,7 @@ class chatbot:
             # Note: Today's date is {current_date}.
             # """
             
-           human_content += f"""
+            human_content += f"""
 
             CRITICAL: You are a FACT-CHECK BOT ONLY. You MUST NOT answer general knowledge questions.
             
