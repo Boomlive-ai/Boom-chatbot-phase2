@@ -536,10 +536,10 @@ class chatbot:
             """
             
             if formatted_boom_results:
-                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
+                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}\n\n Please check if User Query: {user_query} is having any direct context in the results , if not mark it as 'not verified'"
             
             if formatted_fact_checks:
-                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
+                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}\n\n Please check if User Query: {user_query} is having any direct context in the results , if not mark it as 'not verified'"
             
             # human_content += f"""
             
