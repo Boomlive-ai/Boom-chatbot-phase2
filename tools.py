@@ -14,25 +14,50 @@ class ArticleTools:
     @staticmethod
     @tool
     def rag_search(query: str, language_code: str, original_message: str = None) -> str:
-        """
-        This tool performs semantic searches across articles to find relevant information that matches the user's query based on meaning rather than keywords.
+        # """
+        # This tool performs semantic searches across articles to find relevant information that matches the user's query based on meaning rather than keywords.
 
-        **Use When:** 
-        - The user is asking about a specific claim, event, or incident (e.g., "Modi chants in the US", or descriptive queries like "7 साल पुराना वीडियो").
-        - The query suggests the need for fact-checking or detailed analysis of an occurrence or statement.
-        - Broad or open-ended questions where semantic understanding is required (e.g., "What are RAG systems?", "Explain Retrieval Augmented Generation").
+        # **Use When:** 
+        # - The user is asking about a specific claim, event, or incident (e.g., "Modi chants in the US", or descriptive queries like "7 साल पुराना वीडियो").
+        # - The query suggests the need for fact-checking or detailed analysis of an occurrence or statement.
+        # - Broad or open-ended questions where semantic understanding is required (e.g., "What are RAG systems?", "Explain Retrieval Augmented Generation").
+
+        # **Parameters:**
+        # - query: Extract keywords from raw user input orignally recieved and make a query without missing any context from start.
+        # - language_code: A short code for the language of the query. Supported values are:
+        #         - "en" for English
+        #         - "hi" for Hindi
+        #         - "bn" for Bangla
+        # - original_message: A string containing the complete, unprocessed, raw user input as it was originally received, including any formatting, extra text, social media handles, timestamps, or contextual information that may have been stripped during query processing. This preserves the full context of what the user actually typed or sent.
+
+        # **Returns:**
+        # - Article content semantically related to the query, providing relevant information or fact-based insights.
+        # """
+        """
+        This tool performs semantic searches across news and fact-check articles to find relevant information matching the user's query based on meaning and context—not just keywords.
+
+        **Use When:**
+        - The user is asking about a specific news claim, event, or incident (e.g., "ईरान में यहूदियों की फांसी," "Modi chants in the US," "7 साल पुराना वीडियो").
+        - The query relates to fact-checking, rumor verification, or asks "Did this really happen?" or "Is this true?"
+        - The query needs evidence, context, or sources about a claim circulating on social media or news.
+        - The query is broad, open-ended, or requires a reasoned, fact-based explanation (e.g., "What are RAG systems?", "Explain why...").
+        - The query is in English, Hindi, or Bangla.
+
+        **Typical queries:**
+        - "ईरान में कितने यहूदी रहते हैं?"
+        - "Did Modi chant slogans in the US Parliament?"
+        - "Explain the process of retrieval-augmented generation."
+        - "What is the truth about viral claim X?"
 
         **Parameters:**
-        - query: Extract keywords from raw user input orignally recieved and make a query without missing any context from start.
-        - language_code: A short code for the language of the query. Supported values are:
-                - "en" for English
-                - "hi" for Hindi
-                - "bn" for Bangla
-        - original_message: A string containing the complete, unprocessed, raw user input as it was originally received, including any formatting, extra text, social media handles, timestamps, or contextual information that may have been stripped during query processing. This preserves the full context of what the user actually typed or sent.
+        - query: Main semantic query string (extracted from user's input, never omitting context).
+        - language_code: "en" for English, "hi" for Hindi, "bn" for Bangla.
+        - original_message: Full, unprocessed input from the user.
 
         **Returns:**
-        - Article content semantically related to the query, providing relevant information or fact-based insights.
+        - Relevant content and sources matching the factual or contextual intent of the query.
         """
+
         print("Inside rag_search",query, language_code, original_message)
         query = original_message if original_message else query
 
