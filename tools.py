@@ -34,28 +34,36 @@ class ArticleTools:
         # - Article content semantically related to the query, providing relevant information or fact-based insights.
         # """
         """
-        This tool performs semantic searches across news and fact-check articles to find relevant information matching the user's query based on meaning and context—not just keywords.
+        This tool performs semantic searches across news and fact-check articles to find relevant information matching the user's query based on meaning and context.
 
-        **Use When:**
-        - The user is asking about a specific news claim, event, or incident (e.g., "ईरान में यहूदियों की फांसी," "Modi chants in the US," "7 साल पुराना वीडियो").
-        - The query relates to fact-checking, rumor verification, or asks "Did this really happen?" or "Is this true?"
-        - The query needs evidence, context, or sources about a claim circulating on social media or news.
-        - The query is broad, open-ended, or requires a reasoned, fact-based explanation (e.g., "What are RAG systems?", "Explain why...").
-        - The query is in English, Hindi, or Bangla.
+        **ALWAYS USE THIS TOOL WHEN:**
+        - User asks about specific factual claims, events, or incidents (especially those that may need verification)
+        - Query contains statements about current events, politics, conflicts, or controversial topics
+        - User mentions specific numbers, statistics, or percentages about events or populations
+        - Query includes phrases like "क्या यह सच है?", "Is this true?", "Did this happen?", or similar verification requests
+        - Query contains claims about government actions, arrests, executions, or military activities
+        - User shares content that appears to be from social media or news sources
+        - Query mentions specific countries, organizations, or public figures in the context of recent events
+        - User asks about religious or ethnic minorities and their treatment
+        - Query contains hashtags, social media handles, or appears to be forwarded content
+        - ANY query in Hindi, Bengali, or English that contains factual assertions that could be verified
 
-        **Typical queries:**
-        - "ईरान में कितने यहूदी रहते हैं?"
-        - "Did Modi chant slogans in the US Parliament?"
-        - "Explain the process of retrieval-augmented generation."
-        - "What is the truth about viral claim X?"
+        **SPECIFIC INDICATORS TO ALWAYS TRIGGER THIS TOOL:**
+        - Numbers with context (e.g., "7000 यहूदी", "700 से ज्यादा", "दसवां हिस्सा")
+        - Government/military references ("सेना", "जनरल", "केबिनेट मंत्री")
+        - Action verbs indicating events ("गिरफ्तार", "लटकाया", "आरोप लगाया")
+        - Geographic references with claims ("ईरान में", "इजरायल से")
+        - References to human rights organizations ("@UNHumanRights")
+        - Claims about persecution, arrests, or violence
+        - Any statement that reads like a news report or social media post
 
         **Parameters:**
-        - query: Main semantic query string (extracted from user's input, never omitting context).
-        - language_code: "en" for English, "hi" for Hindi, "bn" for Bangla.
-        - original_message: Full, unprocessed input from the user.
+        - query: Extract the main factual claim or question from the user's input, preserving all key context and details
+        - language_code: "en" for English, "hi" for Hindi, "bn" for Bangla
+        - original_message: The complete, unprocessed user input exactly as received
 
         **Returns:**
-        - Relevant content and sources matching the factual or contextual intent of the query.
+        - Relevant articles and sources that can verify, contextualize, or fact-check the claims made in the query
         """
 
         print("Inside rag_search",query, language_code, original_message)
