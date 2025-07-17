@@ -51,6 +51,7 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
     Query the chatbot with a question, using a specific thread ID.
     """
     try:
+        print("USING WHATSAPP",using_Whatsapp)
         input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp}
         config = {"configurable": {"thread_id": thread_id}}
 

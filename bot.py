@@ -430,7 +430,7 @@ class chatbot:
                     
                     # Add document excerpts
                     if sources_docs:
-                        formatted_boom_results += "\nRelevant excerpts:\n"
+                        formatted_boom_results += "\nCheck for most relevant article for from below:\n"
                         for doc in sources_docs[:3]:
                             source = doc.get('source', 'Unknown source')
                             content = doc.get('content', 'No content available')
@@ -518,7 +518,7 @@ class chatbot:
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
                 - If the news is not verified then provide a response that says:
-                    "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
+                    "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
                     and provide this link https://boomlive.in/fact-check 
                 - If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
 
@@ -552,7 +552,9 @@ class chatbot:
             - Include 1-2 relevant emojis at the start for immediate context
             - Make it conversational and easy to forward/share
             - Prioritize the most important fact first
-            - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable)
+            - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable), dont use markdown link format.
+            - If the content + full URL exceeds 200 characters, prioritize the URL and shorten the message
+            - Only provide the url which is relevant to the user's query
             - If multiple sources, include only the most credible one
             - Provide the response in language code: {language_code}
             - Focus on ONE key fact that directly answers the query
@@ -560,7 +562,7 @@ class chatbot:
             - Keep sentences short and simple for mobile reading
             - Avoid complex formatting or multiple sections
             - If the news is not verified then provide a response that says:
-                "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
+                "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
                 and provide this link https://boomlive.in/fact-check
             If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
             OPTIMAL FORMATTING EXAMPLES:
