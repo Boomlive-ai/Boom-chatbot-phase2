@@ -41,7 +41,7 @@ article_tools = ArticleTools()
 
 class chatbot:
     def __init__(self):
-        self.llm =ChatOpenAI(model_name="gpt-4.1", temperature=0)
+        self.llm =ChatOpenAI(model_name="gpt-4.1-mini", temperature=0)
         self.memory = MemorySaver()  # Initialize memory for session storage
         current_date = datetime.now().strftime("%B %d, %Y")
           # Initialize Pinecone indices
