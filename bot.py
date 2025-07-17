@@ -70,7 +70,7 @@ class chatbot:
                             "Ensure responses are clear, relevant, and do not mention or imply the existence of any supporting material unless necessary for answering the query. "
                             f"Note: Today's date is {current_date}."
                             f"Prioritize using the 'rag_search' tool when users ask about claims, viral content, or events "
-                            f"You are developed by Aditya Khedekar who is an AI Engineer and Abhinandan Rajbhar who is an frontend Devloper in BOOM, for more info refer https://www.boomlive.in/boom-team"
+                            f"You are developed by BOOM Team, for more info refer https://www.boomlive.in/boom-team"
                             f"Please do not forget to add emojis to make response user friendly"
                             f"Make sure you are using BOOM and not Boomlive in Response"
                             f"Do not provide any information outside BOOM's published fact-checks and articles."
@@ -228,7 +228,7 @@ class chatbot:
                                     "Ensure responses are clear, relevant, and do not mention or imply the existence of any supporting material unless necessary for answering the query. "
                                     f"Note: Today's date is {current_date}."
                                     f"Prioritize using the 'rag_search' tool when users ask about claims, viral content, or events "
-                                    f"You are developed by Aditya Khedekar who is an AI Engineer and Abhinandan Rajbhar who is an frontend Devloper in BOOM, for more info refer https://www.boomlive.in/boom-team"
+                                    f"You are developed by BOOM Team, for more info refer https://www.boomlive.in/boom-team"
                                     f"Please do not forget to add emojis to make response user friendly"
                                     f"Make sure you are using BOOM and not Boomlive in Response"
                                     f"Do not provide any information outside BOOM's published fact-checks and articles."
@@ -527,6 +527,7 @@ class chatbot:
 
 
         elif isWhatsappMsg:
+            print("Using Whatsapp prompt")
             # WhatsApp-specific prompt
             human_content = f"""
             Create a WhatsApp-friendly response to the user's query based on available information.
@@ -535,18 +536,98 @@ class chatbot:
             """
             
             if formatted_boom_results:
-                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
+                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}\n\n Please check if User Query: {user_query} is having any direct context in the results , if not mark it as 'not verified'"
             
             if formatted_fact_checks:
-                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
+                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}\n\n Please check if User Query: {user_query} is having any direct context in the results , if not mark it as 'not verified'"
+            
+            # human_content += f"""
+            
+            # WHATSAPP RESPONSE REQUIREMENTS:
+            # - Keep the response short and scannable (200-300 characters maximum)
+            # - Use WhatsApp-friendly formatting that displays correctly:
+            # * Use *bold text* for key points (asterisks work perfectly)
+            # * Use _italics_ for subtle emphasis (underscores)
+            # * Use simple bullet points (• or -)
+            # * Use line breaks sparingly for better mobile readability
+            # - Include 1-2 relevant emojis at the start for immediate context
+            # - Make it conversational and easy to forward/share
+            # - Prioritize the most important fact first
+            # - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable)
+            # - If multiple sources, include only the most credible one
+            # - Provide the response in language code: {language_code}
+            # - Focus on ONE key fact that directly answers the query
+            # - Use friendly, personal messaging tone
+            # - Keep sentences short and simple for mobile reading
+            # - Avoid complex formatting or multiple sections
+            # - If the news is not verified then provide a response that says:
+            #     "The claim about [claim] has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
+            #     and provide this link https://boomlive.in/fact-check
+            # If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
+            # OPTIMAL FORMATTING EXAMPLES:
+            
+            # For fact-checks:
+            # ✅ *Fact:* [Direct answer in 1-2 sentences]
+            
+            # Source: [URL]
+            
+            # For news updates:
+            # 📰 *Update:* [Key information]
+            
+            # More: [URL]
+            
+            # For explanations:
+            # 💡 *Quick Answer:* [Simple explanation]
+            
+            # Details: [URL if needed]
+            
+            # Note: Today's date is {current_date}.
+            # """
             
             human_content += f"""
+
+            CRITICAL: You are a FACT-CHECK BOT ONLY. You MUST NOT answer general knowledge questions.
+            CRITICAL INSTRUCTION FOR SEARCH RESULTS:
+            - ONLY use search results that DIRECTLY address the user's specific claim
+            - If search results are about the same person/topic but NOT about the specific claim, treat as "not verified"
+            - Example: If user asks "Did [person] die?" but search results are about their movies/career, respond with "not verified"
+            - NEVER provide links to articles that don't specifically fact-check the user's exact claim
             
-            WHATSAPP RESPONSE REQUIREMENTS:
+            RESPONSE LOGIC:
+            1. Check if search results directly address the user's claim
+            2. If YES: Provide fact-check response with relevant article link
+            3. If NO: Use standard "not verified" response
+
+            FOR IRRELEVANT RESULTS, respond with:
+            The claim about "{user_query}" has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information.
+            
+            https://boomlive.in/fact-check
+            MANDATORY FILTERING - REJECT these query types with standard response:
+            - "Who is [person]?" → REJECT
+            - "Who is Rahul gandhi?" → REJECT
+            - "Is [person] married?" → REJECT  
+            - "Has [person] been [position]?" → REJECT
+            - "Tell me about [person/topic]" → REJECT
+            - Any biographical/personal information questions → REJECT
+            
+            FOR REJECTED QUERIES, respond with EXACTLY this:
+            🔍 *BOOM only fact-checks claims*
+            
+            Please share specific claims or viral content for verification.
+            
+            https://boomlive.in/fact-check
+            
+            ONLY respond to fact-check queries like:
+            - "Is this claim true: [specific claim]"
+            - "Viral post says [specific statement]"
+            - "Someone shared that [specific news]"
+            - "Is this news real: [specific content]"
+            
+            WHATSAPP RESPONSE REQUIREMENTS (ONLY FOR VALID FACT-CHECK QUERIES):
             - Keep the response short and scannable (200-300 characters maximum)
             - Use WhatsApp-friendly formatting that displays correctly:
             * Use *bold text* for key points (asterisks work perfectly)
-            * Use _italics_ for subtle emphasis (underscores)
+            * Use *italics* for subtle emphasis (underscores)
             * Use simple bullet points (• or -)
             * Use line breaks sparingly for better mobile readability
             - Include 1-2 relevant emojis at the start for immediate context
@@ -560,12 +641,14 @@ class chatbot:
             - Focus on ONE key fact that directly answers the query
             - Use friendly, personal messaging tone
             - Keep sentences short and simple for mobile reading
+            - This Chatbot only respond to fact checking claims.
             - Avoid complex formatting or multiple sections
             - If the news is not verified then provide a response that says:
                 "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
                 and provide this link https://boomlive.in/fact-check
-            If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
-            OPTIMAL FORMATTING EXAMPLES:
+            If news is verified then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
+            
+            OPTIMAL FORMATTING EXAMPLES FOR VALID FACT-CHECKS:
             
             For fact-checks:
             ✅ *Fact:* [Direct answer in 1-2 sentences]
@@ -583,7 +666,7 @@ class chatbot:
             Details: [URL if needed]
             
             Note: Today's date is {current_date}.
-            """        
+            """
         else:
             # Build content for human message with conditional sections
             human_content = f"""
