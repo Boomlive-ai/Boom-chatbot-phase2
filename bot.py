@@ -532,64 +532,37 @@ class chatbot:
 
 
         elif isWhatsappMsg:
-            # WhatsApp-specific prompt
             human_content = f"""
-            Create a WhatsApp-friendly response to the user's query based on available information.
+        You are generating a WhatsApp message to answer a user's fact-check query.
+
+        User's query: {user_query}
+
+        {("BOOM search results:\n" + formatted_boom_results) if formatted_boom_results else ""}
+        {("Other Fact Check results:\n" + formatted_fact_checks) if formatted_fact_checks else ""}
+
+        REQUIREMENTS:
+        - Maximum length: 300 characters (including any URLs).
+        - Begin with 1-2 context-appropriate emojis.
+        - *Bold* the key verdict or main fact (use asterisks).
+        - Add a short, simple, clear summary in the user's language ({language_code}).
+        - End with Source: [RAW URL] on a new line. No markdown.
+        - If both a relevant BOOM and another fact check are found, only include the most direct/correct BOOM article URL in the message.
+        - If nothing matches, reply:
+        "❗ *The claim about {user_query} has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
+        Source: https://boomlive.in/fact-check"
+        - No extra formatting, sections, or text.
+        - Make it friendly, trustworthy, and scannable for WhatsApp.
+
+        EXAMPLES:
+        ✅ *Fact:* [Short answer]
+        Source: [URL]
+
+        ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
+        Source: https://boomlive.in/fact-check
+
+        Today's date: {current_date}
+        """
             
-            User's query: {user_query}
-            """
-            
-            if formatted_boom_results:
-                human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
-            
-            if formatted_fact_checks:
-                human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
-            
-            human_content += f"""
-            
-            WHATSAPP RESPONSE REQUIREMENTS:
-            - Keep the response short and scannable (200-300 characters maximum)
-            - Use WhatsApp-friendly formatting that displays correctly:
-            * Use *bold text* for key points (asterisks work perfectly)
-            * Use _italics_ for subtle emphasis (underscores)
-            * Use simple bullet points (• or -)
-            * Use line breaks sparingly for better mobile readability
-            - Include 1-2 relevant emojis at the start for immediate context
-            - Make it conversational and easy to forward/share
-            - Prioritize the most important fact first
-            - For URLs, use the complete raw URL (WhatsApp auto-converts to clickable), dont use markdown link format.
-            - If the content + full URL exceeds 200 characters, prioritize the URL and shorten the message
-            - Only provide the url which is relevant to the user's query
-            - If multiple sources, include only the most credible one
-            - Provide the response in language code: {language_code}
-            - Focus on ONE key fact that directly answers the query
-            - Use friendly, personal messaging tone
-            - Keep sentences short and simple for mobile reading
-            - Avoid complex formatting or multiple sections
-            - If user's query:{user_query} is a not related to asking any claim that can be verified by "BOOM search results" or "Other Fact Check results" then mark it as "not verified", 
-            - If the news is not verified then provide a response that says:
-                "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
-                and provide this link https://boomlive.in/fact-check
-            If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
-            OPTIMAL FORMATTING EXAMPLES:
-            
-            For fact-checks:
-            ✅ *Fact:* [Direct answer in 1-2 sentences]
-            
-            Source: [URL]
-            
-            For news updates:
-            📰 *Update:* [Key information]
-            
-            More: [URL]
-            
-            For explanations:
-            💡 *Quick Answer:* [Simple explanation]
-            
-            Details: [URL if needed]
-            
-            Note: Today's date is {current_date}.
-            """        
         else:
             # Build content for human message with conditional sections
             human_content = f"""
