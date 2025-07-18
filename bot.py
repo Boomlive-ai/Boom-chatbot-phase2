@@ -548,7 +548,7 @@ class chatbot:
         - End with Source: [RAW URL] on a new line. No markdown.
         - If both a relevant BOOM and another fact check are found, only include the most direct/correct BOOM article URL in the message.
         - If nothing matches, reply:
-        "❗ *The claim about {user_query} has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
+        "❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
         Source: https://boomlive.in/fact-check"
         - No extra formatting, sections, or text.
         - Make it friendly, trustworthy, and scannable for WhatsApp.
