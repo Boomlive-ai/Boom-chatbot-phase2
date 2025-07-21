@@ -6,33 +6,14 @@ import re, os
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles
-from utils import prioritize_sources
+from utils import prioritize_sources, translate_text
 
 class ArticleTools:
     def __init__(self):
         pass
     @staticmethod
     @tool
-    def rag_search(query: str, language_code: str, original_message: str = None) -> str:
-        # """
-        # This tool performs semantic searches across articles to find relevant information that matches the user's query based on meaning rather than keywords.
-
-        # **Use When:** 
-        # - The user is asking about a specific claim, event, or incident (e.g., "Modi chants in the US", or descriptive queries like "7 साल पुराना वीडियो").
-        # - The query suggests the need for fact-checking or detailed analysis of an occurrence or statement.
-        # - Broad or open-ended questions where semantic understanding is required (e.g., "What are RAG systems?", "Explain Retrieval Augmented Generation").
-
-        # **Parameters:**
-        # - query: Extract keywords from raw user input orignally recieved and make a query without missing any context from start.
-        # - language_code: A short code for the language of the query. Supported values are:
-        #         - "en" for English
-        #         - "hi" for Hindi
-        #         - "bn" for Bangla
-        # - original_message: A string containing the complete, unprocessed, raw user input as it was originally received, including any formatting, extra text, social media handles, timestamps, or contextual information that may have been stripped during query processing. This preserves the full context of what the user actually typed or sent.
-
-        # **Returns:**
-        # - Article content semantically related to the query, providing relevant information or fact-based insights.
-        # """
+    def rag_search(query: str, language_code: str, original_message: str = None, chatbot_type: str = "web") -> str:
         """
         This tool performs semantic searches across news and fact-check articles to find relevant information matching the user's query based on meaning and context.
 
@@ -61,13 +42,24 @@ class ArticleTools:
         - query: Extract the main factual claim or question from the user's input, preserving all key context and details
         - language_code: "en" for English, "hi" for Hindi, "bn" for Bangla
         - original_message: The complete, unprocessed user input exactly as received
-
+        - chatbot_type: Type of chatbot interface ("web", "whatsapp", "twitter")
+        
         **Returns:**
         - Relevant articles and sources that can verify, contextualize, or fact-check the claims made in the query
         """
 
         print("Inside rag_search",query, language_code, original_message)
         query = original_message if original_message else query
+    # Prepare queries for each language (use provided translations or fallback to original)
+        english_search_query = translate_text(query, "en")
+        hindi_search_query = translate_text(query, "hi")
+        bangla_search_query = translate_text(query, "bn")
+        print("***********************************************************************")
+        print("Chatbot Type:", chatbot_type)
+        print("English Query:", english_search_query)
+        print("Hindi Query:", hindi_search_query)
+        print("Bangla Query:", bangla_search_query)
+        print("***********************************************************************")
 
         # print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
         # print(f"Query: {query}, Language Code: {language_code}")
@@ -94,45 +86,50 @@ class ArticleTools:
             index_to_use='hindi-boom-articles'
         elif language_code=='bn':
             index_to_use='bangla-boom-articles'
-        
+        if chatbot_type == "whatsapp":
+            index_to_use = "all"
         all_docs = []
         all_sources = []
-    
+        
         # Simple mock implementation of semantic search
         # Clean up index_to_use if needed
         if index_to_use is not None:
             index_to_use = index_to_use.split(".")[-1].strip()
         
         # Retrieve documents based on selected index
-        if index_to_use in ["latest", None, "both"]:
+        if index_to_use in ["latest", None, "both", "all"]:
             latest_retriever = latest_index.as_retriever(search_kwargs={"k": 5})
-            latest_docs = latest_retriever.get_relevant_documents(query)
+            latest_docs = latest_retriever.get_relevant_documents(english_search_query)
             all_docs.extend(latest_docs)
             all_sources.extend([doc.metadata.get("source", "Unknown") for doc in latest_docs])
             print(f"Latest documents retrieved: {len(latest_docs)}")
         
-        if index_to_use in ["old", "both"]:
+        if index_to_use in ["old", "both", "all"]:
             old_retriever = old_index.as_retriever(search_kwargs={"k": 5})
-            old_docs = old_retriever.get_relevant_documents(query)
+            old_docs = old_retriever.get_relevant_documents(english_search_query)
             all_docs.extend(old_docs)
             all_sources.extend([doc.metadata.get("source", "Unknown") for doc in old_docs])
             print(f"Old documents retrieved: {len(old_docs)}")
         
-        if index_to_use == "hindi-boom-articles":
+        if index_to_use in ["hindi-boom-articles", "all"]:
             hindi_retriever = hindi_index.as_retriever(search_kwargs={"k": 5})
-            hindi_docs = hindi_retriever.get_relevant_documents(query)
+            hindi_docs = hindi_retriever.get_relevant_documents(hindi_search_query)
             all_docs.extend(hindi_docs)
             all_sources.extend([doc.metadata.get("source", "Unknown") for doc in hindi_docs])
             print(f"Hindi documents retrieved: {len(hindi_docs)}")
         
-        if index_to_use == "bangla-boom-articles":
+        if index_to_use in ["bangla-boom-articles", "all"]:
             bangla_retriever = bangla_index.as_retriever(search_kwargs={"k": 5})
-            bangla_docs = bangla_retriever.get_relevant_documents(query)
+            bangla_docs = bangla_retriever.get_relevant_documents(bangla_search_query)
             all_docs.extend(bangla_docs)
             all_sources.extend([doc.metadata.get("source", "Unknown") for doc in bangla_docs])
             print(f"Bangla documents retrieved: {len(bangla_docs)}")
 
         unique_sources = list(set(all_sources))
+        print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+        print("Unique Sources:", unique_sources)
+        print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+
         unique_sources = prioritize_sources(original_message, unique_sources)
         return {"sources_url": unique_sources, "sources_documents": all_docs}
         

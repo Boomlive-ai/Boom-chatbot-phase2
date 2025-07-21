@@ -796,3 +796,31 @@ async def test_google_sheets_manually():
         print("❌ Manual test failed - check error messages above")
     
     return success
+
+
+from deep_translator import MicrosoftTranslator, GoogleTranslator
+import re
+
+def translate_text(text: str, target_lang: str) -> str:
+    if not text or not target_lang:
+        return "Invalid input"
+
+    # Preserve @mentions and numbers
+    preserved = {}
+    for i, mention in enumerate(re.findall(r'@\w+', text)):
+        placeholder = f"__M{i}__"
+        text = text.replace(mention, placeholder, 1)
+        preserved[placeholder] = mention
+
+    try:
+        # Try DeepL first (best accuracy)
+        translated = GoogleTranslator(source='auto', target=target_lang).translate(text)
+            
+        # Restore preserved elements
+        for placeholder, original in preserved.items():
+            translated = translated.replace(placeholder, original)
+            
+        return translated
+        
+    except:
+        return f"Translation error for: {text[:50]}..."

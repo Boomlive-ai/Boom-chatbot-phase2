@@ -36,6 +36,8 @@ class MessagesState(TypedDict):
     boom_results: Optional[Dict[str, Any]]  
     isTwitterMsg: Optional[bool]  # Flag to indicate if the message is from Twitter
     isWhatsappMsg: Optional[bool]  # Flag to indicate if the message is from WhatsApp
+    chatbot_type: Optional[str]  # New parameter to indicate chatbot type
+
 # # Initialize tools
 article_tools = ArticleTools()
 
@@ -93,6 +95,7 @@ class chatbot:
         tool_results = {}
         boom_results = {}  # Add dedicated structure for boom results
         new_messages = list(messages)  # Create a copy of the messages list
+        chatbot_type = state.get("chatbot_type", "web")
 
         for tool_call in last_message.tool_calls:
             tool_name = tool_call["name"]
@@ -105,7 +108,7 @@ class chatbot:
                         # For tools that expect a 'self' parameter but don't receive it in the args
                         if hasattr(tool, 'func') and tool.func.__name__ == 'rag_search':
                             if isinstance(tool_args, dict) and 'self' not in tool_args:
-                                modified_args = {'self': article_tools, **tool_args}
+                                modified_args = {'self': article_tools, 'chatbot_type': chatbot_type, **tool_args}
                                 result = tool.invoke(modified_args)
                             else:
                                 result = tool.invoke(tool_args)
@@ -222,6 +225,7 @@ class chatbot:
     def call_model(self,state: MessagesState):
         messages = state['messages']
         current_date = datetime.now().strftime("%B %d, %Y")
+        chatbot_type = state.get("chatbot_type", "web")
         updated_system_message = SystemMessage(
                             content=(
                                     "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
@@ -248,9 +252,9 @@ class chatbot:
         messages.insert(0, updated_system_message)
         response = self.llm_with_tool.invoke(messages)
         lang_code = get_language_code(query)
-        print(f"Detected language: {lang_code}")
+        print(f"Detected language: {lang_code}, Chatbot type: {chatbot_type}")
         # print(f"Model Response: {response}")
-        return {"messages": [response], "used_google_fact_check": False, "language_code": lang_code,"fact_check_results": {}, "tool_results": {}, "tool_name": None, "boom_results": {}}
+        return {"messages": [response], "used_google_fact_check": False, "language_code": lang_code,"fact_check_results": {}, "tool_results": {}, "tool_name": None, "boom_results": {},"chatbot_type": chatbot_type}
     
 
     def router_function(self, state: MessagesState) -> Literal["tools", "google_fact_check", "result_agent", END]:
@@ -558,7 +562,8 @@ class chatbot:
         Source: [URL]
 
         ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-        Source: https://boomlive.in/fact-check
+        🔗 For more details, visit: https://boomlive.in/fact-check
+
 
         Today's date: {current_date}
         """

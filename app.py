@@ -52,7 +52,8 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
     """
     try:
         print("USING WHATSAPP",using_Whatsapp)
-        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp}
+        chatbot_type = "whatsapp" if using_Whatsapp else ("twitter" if using_Twitter else "web")
+        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp, "chatbot_type": chatbot_type}
         config = {"configurable": {"thread_id": thread_id}}
 
         # Invoke the workflow with the specified thread_id
