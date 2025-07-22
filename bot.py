@@ -226,6 +226,12 @@ class chatbot:
         messages = state['messages']
         current_date = datetime.now().strftime("%B %d, %Y")
         chatbot_type = state.get("chatbot_type", "web")
+        for message in state["messages"]:
+            if isinstance(message, HumanMessage):
+                # print(f"\nHuman: {message.content}")
+                query = message.content
+        lang_code = get_language_code(query)
+
         updated_system_message = SystemMessage(
                             content=(
                                     "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
@@ -242,16 +248,12 @@ class chatbot:
                                     f"If user's query is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then mark it as not verified"
                                     f"If the claim or the query asked by user is general question unrelated to any fact-check or article, then tell user to ask fact check rleated claims and queries"
                                     f"If the news is 'not verified' then provide a response that says:The claim has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information. and provide this link https://boomlive.in/fact-check :"
+                                    f"Provide response in language code: {lang_code}"
                                     # f"For more details, Visit [BOOM's Fact Check](https://www.boomlive.in/fact-check) 🕵️‍♂️✨."
                                 )
                         )
-        for message in state["messages"]:
-            if isinstance(message, HumanMessage):
-                # print(f"\nHuman: {message.content}")
-                query = message.content
         messages.insert(0, updated_system_message)
         response = self.llm_with_tool.invoke(messages)
-        lang_code = get_language_code(query)
         print(f"Detected language: {lang_code}, Chatbot type: {chatbot_type}")
         # print(f"Model Response: {response}")
         return {"messages": [response], "used_google_fact_check": False, "language_code": lang_code,"fact_check_results": {}, "tool_results": {}, "tool_name": None, "boom_results": {},"chatbot_type": chatbot_type}
@@ -586,7 +588,7 @@ class chatbot:
             
             Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
             Use emojis appropriately to make the response user-friendly.
-            Provide the response in language code: {language_code}
+            Strictlyy Provide the response in language code: {language_code}
             f"Note: Today's date is {current_date}."
             Format your response with clear article citations:
             **(Article Title Of Article):** Your summary here
