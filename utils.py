@@ -634,7 +634,8 @@ def check_boom_verification_status(response_content: str) -> bool:
         "please avoid sharing unverified information",
         "not been verified by boom",  # lowercase variant
         "team is reviewing it",       # partial match
-        "unverified information"      # general pattern
+        "unverified information",      # general pattern
+        "no verified information"
     ]
     
     # Check if response contains any unverified patterns
@@ -687,7 +688,7 @@ async def store_unverified_content_to_sheets(
     GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7KHK82a1x2OvU8bX6G5Phny7PE9TKmNbexLyk0rqHcHvpL7Pgx2DVkQ5SpPQItVVEpQ/exec"
     
     # Determine platform
-    platform = "API"
+    platform = "WEB"
     if using_Twitter:
         platform = "Twitter"
     elif using_Whatsapp:

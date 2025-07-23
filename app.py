@@ -86,6 +86,7 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
                     sources_url.extend(urls)
         
         result = response["messages"][-1].content
+        print(f"Result: {result}")
         isBoomVerified = check_boom_verification_status(result)
 
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
