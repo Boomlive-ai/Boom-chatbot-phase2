@@ -597,6 +597,8 @@ class chatbot:
             (Add a partition line like hr tag in markdown)
             
             Cite sources clearly, prioritizing BOOM articles first.
+            - If user's query:{user_query} is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then just reply with:"Not Found"., 
+
             If no relevant information is available,don't acknowledge this limitation.
             """
         print("Human content prepared for LLM invocation", human_content)

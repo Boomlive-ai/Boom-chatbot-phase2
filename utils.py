@@ -635,7 +635,8 @@ def check_boom_verification_status(response_content: str) -> bool:
         "not been verified by boom",  # lowercase variant
         "team is reviewing it",       # partial match
         "unverified information",      # general pattern
-        "no verified information"
+        "no verified information",
+        "not found"
     ]
     
     # Check if response contains any unverified patterns
