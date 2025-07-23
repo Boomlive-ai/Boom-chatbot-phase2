@@ -591,11 +591,12 @@ class chatbot:
             Strictlyy Provide the response in language code: {language_code}
             f"Note: Today's date is {current_date}."
             Format your response with clear article citations:
-            **(Article Title Of Article):** Your summary here
-            
-            [Read more](Article URL here)
+            **(Article Title Of Article1):** Your summary here
+            [Read more](Article1 URL here)
             (Add a partition line like hr tag in markdown)
-            
+            **(Article Title Of Article2):** Your summary here
+            [Read more](Article2 URL here)
+            (Add a partition line like hr tag in markdown)
             Cite sources clearly, prioritizing BOOM articles first.
             - If user's query:{user_query} is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then just reply with:"Not Found"., 
 
