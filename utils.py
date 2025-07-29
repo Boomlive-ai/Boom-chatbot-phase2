@@ -294,6 +294,236 @@ def check_rag_relevance(query, sources_url, sources_documents, llm):
     return result == "True"
 
 
+from langchain.schema import HumanMessage
+from typing import Dict, Any
+
+def is_generic_query(query: str, llm) -> bool:
+    """
+    Uses provided LLM to determine if a query is generic (True) or fact-check claim (False).
+    
+    Args:
+        query (str): The user's query to classify
+        llm: The language model instance to use
+    
+    Returns:
+        bool: True if generic query, False if fact-check claim
+    """
+    
+    prompt = f"""Is this a generic information query (like "What is X?", "How to do Y?", definitions, explanations) or a specific factual claim that needs verification?
+
+Query: "{query}"
+
+Answer ONLY with "True" or "False".
+- True = Generic information query
+- False = Factual claim needing verification"""
+
+    try:
+        response = llm.invoke([HumanMessage(content=prompt)])
+        result = response.content.strip()
+        
+        # Return True if the response is "True", False otherwise
+        return result == "True"
+        
+    except Exception as e:
+        print(f"Classification error: {e}")
+        # Fallback: default to generic for safety
+        return True
+
+
+def general_query_search(query: str, language_code: str = "en") -> Dict[str, Any]:
+        """
+        Performs a general web search for informational queries, how-to questions, definitions, explanations, and general knowledge requests.
+
+        **USE THIS TOOL FOR GENERAL QUERIES:**
+        - General information requests ("What is climate change?", "How to cook rice?")
+        - Educational queries ("Explain photosynthesis", "History of India")
+        - How-to and instructional queries ("How to apply for passport?", "Steps to start a business")
+        - Definition requests ("What does AI mean?", "Define democracy")
+        - General knowledge questions ("Who invented the telephone?", "Capital of France")
+        - Opinion-seeking queries ("Best places to visit in India", "Top universities")
+        - Comparative queries ("Difference between Android and iOS")
+        - Process explanations ("How does voting work?", "What is the procedure for...")
+        - General current affairs without specific factual claims
+        - Queries asking for lists, recommendations, or general information
+        - Questions starting with "What", "How", "Why", "Where", "When" that seek general information
+        - Educational content requests in any language
+
+        **DO NOT USE FOR:**
+        - Specific factual claims that need verification
+        - Statements containing statistics, numbers, or percentages about recent events
+        - Claims about arrests, executions, government actions, or conflicts
+        - Content that appears to be from social media or news sources needing fact-checking
+        - Verification requests ("Is this true?", "Did this happen?")
+
+        Parameters:
+        - query: The user's general information query
+        - language_code: ISO code for language (e.g., "en", "hi", "bn")
+
+        Returns:
+        - Dict with filtered result list containing 'title', 'url', and 'snippet' from trusted sources
+        """
+        import requests
+        import os
+
+        serp_api_key = os.getenv("SERP_API_KEY")
+        url = "https://serpapi.com/search"
+
+        params = {
+            "q": query,
+            "location": "India",
+            "hl": language_code,
+            "gl": "in",
+            "api_key": serp_api_key,
+            "num": 10
+        }
+
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        trusted_domains = [
+            "bbc.com/hindi", "bbc.com/marathi", "bbc.com/news/world/asia/india",
+            "indianexpress.com", "thenewsminute.com", "thehindu.com",
+            "indiaspendhindi.com", "indiaspend.com"
+        ]
+
+        results = []
+        if "organic_results" in data:
+            for item in data["organic_results"]:
+                url = item.get("link", "")
+                if any(domain in url for domain in trusted_domains):
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": url,
+                        "snippet": item.get("snippet", "")
+                    })
+        print("Results: ",results)
+        return {"trusted_results": results}
+    
+    
+from langchain.schema import HumanMessage
+
+def combined_relevance_and_type_check(query, sources_url, sources_documents, llm):
+    """
+    Single LLM call to check both RAG relevance and query type.
+    Returns: tuple (is_relevant: bool, is_generic: bool)
+    """
+    if not sources_documents and not sources_url:
+        # No RAG results available, just check query type
+        return False, is_generic_query_only(query, llm)
+    
+    # Extract content from documents
+    document_contents = []
+    for doc in sources_documents:
+        if hasattr(doc, 'page_content') and doc.page_content:
+            document_contents.append(doc.page_content)
+    combined_prompt = f"""
+        You are given a user query and a list of retrieved documents. You must answer TWO questions:
+
+        User Query: "{query}"
+        Retrieved Documents: {document_contents}
+
+        🔍 QUESTION 1 — RELEVANCE CHECK:
+        Determine if ANY of the retrieved documents are relevant to the user query. 
+        A document is considered relevant if it provides information that:
+        - Directly addresses the topic or event mentioned in the query
+        - Supports OR refutes a claim made in the query
+        - Provides meaningful context to the topic being asked
+
+        Respond RELEVANCE: True if even ONE document relates to the query in any way.
+
+        🤖 QUESTION 2 — QUERY TYPE CHECK:
+        Classify the nature of the query:
+        - If it's asking for **general knowledge**, **how-to guidance**, **definitions**, **explanations**, or **contextual information** (e.g., "What is...", "How to...", "Why does...") → it's **Generic**
+        - If it's making a **verifiable claim**, **reporting an event**, **referencing statistics**, or asking if a **statement is true/false** → it's **Factual**
+
+        🧠 Examples:
+        - "What is climate change?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
+        - "PM Modi announced new policy yesterday" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+        - "How to apply for passport?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
+        - "Company XYZ reported 50% profit increase" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+        - "Why India's inequality is underestimated?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
+        - "A viral post claims India has eradicated extreme poverty" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+
+        🎯 FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS:
+        RELEVANCE: [True/False]  
+        QUERY_TYPE: [Generic/Factual]
+        """
+
+    # Combined prompt for both checks
+    # combined_prompt = f"""
+    # You need to analyze the user query and retrieved documents to answer TWO questions:
+
+    # User Query: "{query}"
+    # Retrieved Documents: {document_contents}
+
+    # QUESTION 1 - RELEVANCE CHECK:
+    # Do ANY of these documents contain information related to the query, even if they contradict or fact-check the claim in the query? 
+    # A document is relevant if it discusses the same event, claim, or topic mentioned in the query, WHETHER IT SUPPORTS OR REFUTES THE CLAIM.
+
+    # QUESTION 2 - QUERY TYPE CHECK:
+    # Is this user query a generic information request (like "What is X?", "Why India’s Inequality Is Underestimated","How to do Y?", definitions, explanations, general knowledge) 
+    # OR is it a specific factual claim that needs verification (statements about events, statistics, news claims)?
+
+    # FORMAT YOUR RESPONSE EXACTLY AS:
+    # RELEVANCE: [True/False]
+    # QUERY_TYPE: [Generic/Factual]
+
+    # Examples:
+    # - "What is climate change?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
+    # - "PM Modi announced new policy yesterday" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+    # - "How to apply for passport?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
+    # - "Company XYZ reported 50% profit increase" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+    # """
+    
+    try:
+        response = llm.invoke([HumanMessage(content=combined_prompt)])
+        result = response.content.strip()
+        
+        # Parse the response
+        is_relevant = False
+        is_generic = False  # Default to generic for safety
+        
+        lines = result.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line.startswith('RELEVANCE:'):
+                relevance_value = line.split(':', 1)[1].strip()
+                is_relevant = relevance_value.lower() == 'true'
+            elif line.startswith('QUERY_TYPE:'):
+                query_type = line.split(':', 1)[1].strip().lower()
+                is_generic = query_type == 'generic'
+        if is_generic:
+            is_relevant = False 
+        return is_relevant, is_generic
+        
+    except Exception as e:
+        print(f"Combined check error: {e}")
+        # Fallback: assume not relevant and generic for safety
+        return False, True
+
+def is_generic_query_only(query: str, llm) -> bool:
+    """
+    Fallback function for when no RAG documents are available.
+    Only checks if query is generic or factual claim.
+    """
+    prompt = f"""
+    Is this a generic information query (like "What is X?", "How to do Y?", definitions, explanations) 
+    or a specific factual claim that needs verification?
+
+    Query: "{query}"
+
+    Answer ONLY with "Generic" or "Factual":
+    - Generic = General information query, definitions, how-to questions
+    - Factual = Specific claims about events, statistics, news that need verification
+    """
+    
+    try:
+        response = llm.invoke([HumanMessage(content=prompt)])
+        result = response.content.strip().lower()
+        return result == "generic"
+    except Exception as e:
+        print(f"Query type classification error: {e}")
+        return True  # Default to generic for safety
 def fetch_source_metadata(url: str) -> Dict:
     """
     Fetch metadata from a source URL including publication date, title, etc.

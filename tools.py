@@ -11,41 +11,122 @@ from utils import prioritize_sources, translate_text
 class ArticleTools:
     def __init__(self):
         pass
+    
     @staticmethod
     @tool
-    def rag_search(query: str, language_code: str, original_message: str = None, chatbot_type: str = "web") -> str:
+    def general_query_search(query: str, language_code: str = "en") -> Dict[str, Any]:
         """
-        This tool performs semantic searches across news and fact-check articles to find relevant information matching the user's query based on meaning and context.
+        Performs a general web search for informational queries, how-to questions, definitions, explanations, and general knowledge requests.
 
-        **ALWAYS USE THIS TOOL WHEN:**
-        - User asks about specific factual claims, events, or incidents (especially those that may need verification)
-        - Query contains statements about current events, politics, conflicts, or controversial topics
-        - User mentions specific numbers, statistics, or percentages about events or populations
-        - Query includes phrases like "क्या यह सच है?", "Is this true?", "Did this happen?", or similar verification requests
-        - Query contains claims about government actions, arrests, executions, or military activities
-        - User shares content that appears to be from social media or news sources
-        - Query mentions specific countries, organizations, or public figures in the context of recent events
-        - User asks about religious or ethnic minorities and their treatment
-        - Query contains hashtags, social media handles, or appears to be forwarded content
-        - ANY query in Hindi, Bengali, or English that contains factual assertions that could be verified
+        **USE THIS TOOL FOR GENERAL QUERIES:**
+        - General information requests ("What is climate change?", "How to cook rice?")
+        - Educational queries ("Explain photosynthesis", "History of India")
+        - How-to and instructional queries ("How to apply for passport?", "Steps to start a business")
+        - Definition requests ("What does AI mean?", "Define democracy")
+        - General knowledge questions ("Who invented the telephone?", "Capital of France")
+        - Opinion-seeking queries ("Best places to visit in India", "Top universities")
+        - Comparative queries ("Difference between Android and iOS")
+        - Process explanations ("How does voting work?", "What is the procedure for...")
+        - General current affairs without specific factual claims
+        - Queries asking for lists, recommendations, or general information
+        - Questions starting with "What", "How", "Why", "Where", "When" that seek general information
+        - Educational content requests in any language
 
-        **SPECIFIC INDICATORS TO ALWAYS TRIGGER THIS TOOL:**
-        - Numbers with context (e.g., "7000 यहूदी", "700 से ज्यादा", "दसवां हिस्सा")
-        - Government/military references ("सेना", "जनरल", "केबिनेट मंत्री")
-        - Action verbs indicating events ("गिरफ्तार", "लटकाया", "आरोप लगाया")
-        - Geographic references with claims ("ईरान में", "इजरायल से")
-        - References to human rights organizations ("@UNHumanRights")
-        - Claims about persecution, arrests, or violence
-        - Any statement that reads like a news report or social media post
+        **DO NOT USE FOR:**
+        - Specific factual claims that need verification
+        - Statements containing statistics, numbers, or percentages about recent events
+        - Claims about arrests, executions, government actions, or conflicts
+        - Content that appears to be from social media or news sources needing fact-checking
+        - Verification requests ("Is this true?", "Did this happen?")
 
-        **Parameters:**
-        - query: Extract the main factual claim or question from the user's input, preserving all key context and details
+        Parameters:
+        - query: The user's general information query
+        - language_code: ISO code for language (e.g., "en", "hi", "bn")
+
+        Returns:
+        - Dict with filtered result list containing 'title', 'url', and 'snippet' from trusted sources
+        """
+        import requests
+        import os
+
+        serp_api_key = os.getenv("SERP_API_KEY")
+        url = "https://serpapi.com/search"
+
+        params = {
+            "q": query,
+            "location": "India",
+            "hl": language_code,
+            "gl": "in",
+            "api_key": serp_api_key,
+            "num": 10
+        }
+
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        trusted_domains = [
+            "bbc.com/hindi", "bbc.com/marathi", "bbc.com/news/world/asia/india",
+            "indianexpress.com", "thenewsminute.com", "thehindu.com",
+            "indiaspendhindi.com", "indiaspend.com"
+        ]
+
+        results = []
+        if "organic_results" in data:
+            for item in data["organic_results"]:
+                url = item.get("link", "")
+                if any(domain in url for domain in trusted_domains):
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": url,
+                        "snippet": item.get("snippet", "")
+                    })
+        print("Results: ",results)
+        return {"trusted_results": results}
+    
+    
+    @staticmethod
+    @tool
+    def rag_search(query: str, language_code: str, original_message: str = None, chatbot_type: str = "web") -> str: ## Change name to fact_check_claim_search
+        """
+            Performs semantic searches across news and fact-check articles to verify specific factual claims and statements.
+
+        **USE THIS TOOL ONLY FOR FACT-CHECKING AND VERIFICATION:**
+        - Specific factual claims that need verification ("7000 Jews were arrested")
+        - Statements with specific numbers, statistics, or percentages about recent events
+        - Claims about government actions, arrests, executions, or military activities
+        - Content that appears to be forwarded from social media or news sources
+        - Verification requests with phrases like "क्या यह सच है?", "Is this true?", "Did this happen?"
+        - Claims about conflicts, politics, or controversial recent events
+        - Statements about treatment of religious or ethnic minorities
+        - Content with hashtags, social media handles, or news-like format
+        - Claims about specific incidents, arrests, or government decisions
+        - Statements that read like news reports or social media posts
+
+        **SPECIFIC INDICATORS THAT REQUIRE FACT-CHECKING:**
+        - Exact numbers with context (e.g., "7000 यहूदी", "700 से ज्यादा")
+        - Government/military references with specific claims ("सेना ने गिरफ्तार किया")
+        - Action verbs indicating specific events ("गिरफ्तार", "लटकाया", "आरोप लगाया")
+        - Geographic references with specific claims ("ईरान में हुई गिरफ्तारी")
+        - Claims about persecution, arrests, or violence with specifics
+        - Statements that make definitive assertions about recent events
+
+        **DO NOT USE FOR:**
+        - General information queries ("What is democracy?", "How to cook?")
+        - Educational questions ("Explain climate change")
+        - How-to queries ("How to apply for visa?")
+        - Definition requests ("What does AI mean?")
+        - General current affairs without specific claims
+        - Opinion-seeking queries ("Best places to visit")
+        - Process explanations without factual claims to verify
+
+        Parameters:
+        - query: Extract the specific factual claim that needs verification
         - language_code: "en" for English, "hi" for Hindi, "bn" for Bangla
         - original_message: The complete, unprocessed user input exactly as received
         - chatbot_type: Type of chatbot interface ("web", "whatsapp", "twitter")
         
-        **Returns:**
-        - Relevant articles and sources that can verify, contextualize, or fact-check the claims made in the query
+        Returns:
+        - Relevant articles and sources that can verify or fact-check the specific claims
         """
 
         print("Inside rag_search",query, language_code, original_message)
@@ -132,8 +213,8 @@ class ArticleTools:
 
         unique_sources = prioritize_sources(original_message, unique_sources)
         return {"sources_url": unique_sources, "sources_documents": all_docs}
-        
-
+     
+ 
     @staticmethod
     @tool
     def get_custom_date_range_articles(start_date: str, end_date: str = None, article_type: str = "all", language_code: str = 'en') -> str:
