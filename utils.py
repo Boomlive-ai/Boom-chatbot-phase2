@@ -1100,9 +1100,6 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     - Use raw URLs only (e.g., https://boomlive.in/article-url).
     - If URL + message exceed limit, prioritize URL.
     - Provide response in language code: {language_code}.
-    - If no results are found, reply with:
-    ❗ The claim about the [{user_query}] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.
-    Source: https://boomlive.in/fact-check
     """
 
     elif chatbot_type == "whatsapp":
@@ -1118,9 +1115,6 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     - Clear summary in {language_code}.
     - End with: Source: [RAW URL] (no markdown).
     - DO NOT claim verification based on general search only.
-    - If no results:
-    ❗ *The claim about the [{user_query}] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-    Source: https://boomlive.in/fact-check
     """
 
     # Default to web
@@ -1135,6 +1129,4 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     [Read more](URL)
     <hr>
     Prioritize BOOM articles first.
-    If query ({user_query}) is unrelated to any known result, reply: "Not Found."
-    Do NOT acknowledge limitations if no info is found.
     """
