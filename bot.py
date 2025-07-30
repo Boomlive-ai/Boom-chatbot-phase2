@@ -19,7 +19,7 @@ from datetime import datetime, date, timedelta
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
-from utils import check_rag_relevance, get_language_code, combined_relevance_and_type_check,general_query_search
+from utils import check_rag_relevance, get_language_code, combined_relevance_and_type_check,general_query_search,get_platform_response_requirements
 load_dotenv()
 
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
@@ -229,15 +229,17 @@ class chatbot:
         messages = state['messages']
         current_date = datetime.now().strftime("%B %d, %Y")
         chatbot_type = state.get("chatbot_type", "web")
+        print("CHATBOT TYPE: ", chatbot_type)
         for message in state["messages"]:
             if isinstance(message, HumanMessage):
                 # print(f"\nHuman: {message.content}")
                 query = message.content
         lang_code = get_language_code(query)
-
+        response_guidelines = get_platform_response_requirements(chatbot_type, current_date, query, lang_code)
         updated_system_message = SystemMessage(
                             content=(
                                     "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
+                                    f"\n{response_guidelines}"
                                     "Your responses should be fact-based, sourced from BoomLive's database, and aligned with BoomLive's journalistic standards of accuracy and integrity. "
                                     "Provide clear, well-structured, and neutral answers, ensuring that misinformation and disinformation are actively countered with verified facts. "
                                     "Website: [BoomLive](https://boomlive.in/). "
@@ -259,7 +261,7 @@ class chatbot:
         response = self.llm_with_tool.invoke(messages)
         print(f"Detected language: {lang_code}, Chatbot type: {chatbot_type}")
         # print(f"Model Response: {response}")
-        return {"messages": [response], "used_google_fact_check": False, "language_code": lang_code,"fact_check_results": {}, "tool_results": {}, "tool_name": None, "boom_results": {},"chatbot_type": chatbot_type}
+        return {"messages": [response], "used_google_fact_check": False, "language_code": lang_code,"fact_check_results": {}, "tool_results": {}, "tool_name": None, "boom_results": {}, "general_search_results": {}, "used_general_search": False,"chatbot_type": chatbot_type}
     
 
     def router_function(self, state: MessagesState) -> Literal["tools", "google_fact_check", "result_agent", END]:
@@ -305,6 +307,7 @@ class chatbot:
                 is_relevant, is_generic = combined_relevance_and_type_check(
                 query, sources_url, sources_documents, self.llm)
                 print("IS RELEVANT", is_relevant)
+                print("IS GENERIC", is_generic)
                 if is_relevant:
                     return "result_agent"
                 else:
@@ -477,8 +480,8 @@ class chatbot:
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:5]
-                    sources_docs = sources_docs[:5]
+                    sources_urls = sources_urls[:15]
+                    sources_docs = sources_docs[:15]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
@@ -486,13 +489,13 @@ class chatbot:
                     # Add URLs
                     if sources_urls:
                         formatted_boom_results += "Sources:\n"
-                        for url in sources_urls[:3]:
+                        for url in sources_urls:
                             formatted_boom_results += f"- {url}\n"
                     
                     # Add document excerpts
                     if sources_docs:
                         formatted_boom_results += "\nCheck for most relevant article for from below:\n"
-                        for doc in sources_docs[:3]:
+                        for doc in sources_docs:
                             source = doc.get('source', 'Unknown source')
                             content = doc.get('content', 'No content available')
                             formatted_boom_results += f"From {source}:\n{content}\n\n"
@@ -509,7 +512,7 @@ class chatbot:
                 sources = boom_results[tool_name].get('sources', [])
                 if sources:
                     formatted_boom_results = "Sources:\n"
-                    for source in sources[:3]:
+                    for source in sources:
                         print(f"Source: {source}")
                         boom_sources.append(source[1])
                         formatted_boom_results += f"- {source}\n"
@@ -557,6 +560,7 @@ class chatbot:
                     boom_sources.append(url)
                 
                 formatted_general_results += f"**{title}**\n{snippet}\n[Read more]({url})\n\n"
+            print("Formatted General Results: ",formatted_general_results)
             formatted_boom_results = None
             formatted_fact_checks = None
         # ================================================================
@@ -577,14 +581,15 @@ class chatbot:
                 if formatted_fact_checks:
                     human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
                 
-                # ========== ADD GENERAL RESULTS TO TWITTER CONTENT ==========
+                # ========== ADD GENERAL RESULTS TO REGULAR CONTENT ==========
                 if formatted_general_results:
-                    human_content += f"\n\n{formatted_general_results}"
-                # ============================================================
+                    human_content += f"\n\nGeneral results:\n{formatted_general_results}"
+            # ============================================================
                 
                 human_content += f"""
 
                 TWITTER RESPONSE REQUIREMENTS:
+                - Today's date is {current_date}.
                 - Keep the response under 200 characters (Twitter's character limit)
                 - Use clear, concise language suitable for social media
                 - Include 1-2 relevant emojis to make it engaging
@@ -592,7 +597,7 @@ class chatbot:
                 - Make it conversational and direct
                 - IMPORTANT: For URLs, use ONLY the raw URL (e.g., https://www.boomlive.in/article-url)
                 - DO NOT use markdown link format like [text](url) - Twitter doesn't support this
-                - Twitter will automatically shorten and make URLs clickable
+                - Twitter will automatically shorten and make URLs clickable but provide complete correct url
                 - If including a source URL, ensure the COMPLETE raw URL fits within the 200 character limit
                 - If the content + full URL exceeds 200 characters, prioritize the URL and shorten the message
                 - Alternative: You can skip the source URL and focus on the key message if space is tight
@@ -600,12 +605,9 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                - If user's query: {user_query} is not related to any claim that can be verified by BOOM search results or Other Fact Check results, then consider it "not verified".
-                - If ONLY general search results are present, DO NOT treat the claim as verified.
-                - If no relevant fact-checking evidence exists, respond with:
-                "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information." https://boomlive.in/fact-check
-                - If news is verified (BOOM or Other Fact Check), provide the correct raw URL of the article in the response.
-                Note: Today's date is {current_date}.
+                - If NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
+                    ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
+                    Source: https://boomlive.in/fact-check
                 """
                 
         elif isWhatsappMsg:
@@ -614,7 +616,7 @@ class chatbot:
             You are generating a WhatsApp message to answer a user's fact-check query.
 
             User's query: {user_query}
-
+            Today's date: {current_date}
             {("BOOM search results:\n" + formatted_boom_results) if formatted_boom_results else ""}
             {("Other Fact Check results:\n" + formatted_fact_checks) if formatted_fact_checks else ""}
             {("General Search results:\n" + formatted_general_results) if formatted_general_results else ""}
@@ -634,14 +636,16 @@ class chatbot:
 
             EXAMPLES:
             ✅ *Fact:* [Short answer]  
-            Source: [URL1, URL2]
+            Source: [URL1, URL2]  complete correct urls
 
             ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*  
             🔗 For more details, visit: https://boomlive.in/fact-check
 
-            Today's date: {current_date}
+            
             """
-
+            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            print(human_content)
+            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
         # elif isWhatsappMsg:
         #     human_content = f"""
@@ -692,7 +696,7 @@ class chatbot:
             
             # ========== ADD GENERAL RESULTS TO REGULAR CONTENT ==========
             if formatted_general_results:
-                human_content += f"\n\n{formatted_general_results}"
+                human_content += f"\n\nGeneral results:\n{formatted_general_results}"
             # ============================================================
             
             human_content += f"""
@@ -703,13 +707,13 @@ class chatbot:
             f"Note: Today's date is {current_date}."
             Format your response with clear article citations:
             **(Article Title Of Article1):** Your summary here
-            [Read more](Article1 URL here)
+            [Read more](Article1 URL here)  complete correct url
             (Add a partition line like hr tag in markdown)
             **(Article Title Of Article2):** Your summary here
-            [Read more](Article2 URL here)
+            [Read more](Article2 URL here)  complete correct url
             (Add a partition line like hr tag in markdown)
             Cite sources clearly, prioritizing BOOM articles first.
-            - If user's query:{user_query} is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then just reply with:"Not Found"., 
+            - If user's query:{user_query} is a not related to BOOM search results ,Other Fact Check results or General Result then just reply with:"Not Found"., 
 
             If no relevant information is available,don't acknowledge this limitation.
             """

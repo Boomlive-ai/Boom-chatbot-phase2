@@ -362,6 +362,11 @@ def general_query_search(query: str, language_code: str = "en") -> Dict[str, Any
         Returns:
         - Dict with filtered result list containing 'title', 'url', and 'snippet' from trusted sources
         """
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        print("INSIDE general_query_search")
+        print("QUERY: ", query)
+        print("Language",language_code)
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         import requests
         import os
 
@@ -417,37 +422,55 @@ def combined_relevance_and_type_check(query, sources_url, sources_documents, llm
         if hasattr(doc, 'page_content') and doc.page_content:
             document_contents.append(doc.page_content)
     combined_prompt = f"""
-        You are given a user query and a list of retrieved documents. You must answer TWO questions:
+    Your task is to classify a user query and retrieved documents. You must answer TWO questions with precise logic.
 
-        User Query: "{query}"
-        Retrieved Documents: {document_contents}
+    ---
 
-        🔍 QUESTION 1 — RELEVANCE CHECK:
-        Determine if ANY of the retrieved documents are relevant to the user query. 
-        A document is considered relevant if it provides information that:
-        - Directly addresses the topic or event mentioned in the query
-        - Supports OR refutes a claim made in the query
-        - Provides meaningful context to the topic being asked
+    User Query: "{query}"  
+    Retrieved Documents: {document_contents}
 
-        Respond RELEVANCE: True if even ONE document relates to the query in any way.
+    ---
 
-        🤖 QUESTION 2 — QUERY TYPE CHECK:
-        Classify the nature of the query:
-        - If it's asking for **general knowledge**, **how-to guidance**, **definitions**, **explanations**, or **contextual information** (e.g., "What is...", "How to...", "Why does...") → it's **Generic**
-        - If it's making a **verifiable claim**, **reporting an event**, **referencing statistics**, or asking if a **statement is true/false** → it's **Factual**
+    🔍 QUESTION 1 — RELEVANCE CHECK:
 
-        🧠 Examples:
-        - "What is climate change?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
-        - "PM Modi announced new policy yesterday" → RELEVANCE: [True/False], QUERY_TYPE: Factual
-        - "How to apply for passport?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
-        - "Company XYZ reported 50% profit increase" → RELEVANCE: [True/False], QUERY_TYPE: Factual
-        - "Why India's inequality is underestimated?" → RELEVANCE: [True/False], QUERY_TYPE: Generic
-        - "A viral post claims India has eradicated extreme poverty" → RELEVANCE: [True/False], QUERY_TYPE: Factual
+    Determine if ANY retrieved documents are relevant to the query, BUT ONLY IF the query is FACTUAL.
 
-        🎯 FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS:
-        RELEVANCE: [True/False]  
-        QUERY_TYPE: [Generic/Factual]
-        """
+    📌 A document is considered relevant ONLY IF:
+    - The query is factual AND
+    - The document supports, refutes, or provides meaningful context for a verifiable statement, event, claim, or statistic.
+
+    ⚠️ IMPORTANT: If the query is GENERIC, always respond with →  
+    RELEVANCE: False  
+    → Even if documents seem related thematically, they are NOT considered relevant for Generic queries.
+
+    ---
+
+    🤖 QUESTION 2 — QUERY TYPE CHECK:
+
+    Classify the user query as one of two types:
+
+    1. **Generic** — Open-ended requests for general knowledge, explanations, how-to guidance, conceptual info, or perspective framing.  
+    Examples:  
+    - "What is climate change?"  
+    - "How to apply for a passport?"  
+    - "Why India's inequality is underestimated?"  
+    - "Independent Nipah Spillovers Are A Better Outcome Than An Outbreak"
+
+    2. **Factual** — Statements referring to specific events, statistics, reports, claims, or figures that can be verified or refuted.  
+    Examples:  
+    - "PM Modi announced new policy yesterday"  
+    - "Company XYZ reported 50% profit increase"  
+    - "WHO confirms Nipah virus outbreak in Kerala"  
+    - "A viral post claims India eradicated extreme poverty"
+
+    ---
+
+    🎯 Respond in the EXACT format below:
+    RELEVANCE: [True/False]  
+    QUERY_TYPE: [Generic/Factual]
+    """
+
+
 
     # Combined prompt for both checks
     # combined_prompt = f"""
@@ -749,7 +772,8 @@ def fetch_and_sort_by_date(sources: list) -> list:
             sources_with_dates.append((source_url, datetime.min))
     
     # Sort by publication date (latest first)
-    sources_with_dates.sort(key=lambda x: x[1], reverse=True)
+    sources_with_dates.sort(key=lambda x: normalize_datetime(x[1]), reverse=True)
+
     
     # Extract just the URLs in sorted order
     sorted_sources = [source[0] for source in sources_with_dates]
@@ -757,6 +781,12 @@ def fetch_and_sort_by_date(sources: list) -> list:
     print(f"Sorted {len(sorted_sources)} sources by publication date")
     return sorted_sources
 
+from datetime import datetime, timezone
+def normalize_datetime(dt):
+    if dt.tzinfo is None:
+        # Treat naive datetime as UTC or set desired timezone
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 def prioritize_sources(user_query: str, sources: list, response_text: str = None) -> list:
     """
@@ -1056,3 +1086,55 @@ def translate_text(text: str, target_lang: str) -> str:
         
     except:
         return f"Translation error for: {text[:50]}..."
+    
+    
+def get_platform_response_requirements(chatbot_type: str, current_date: str, user_query: str, language_code: str) -> str:
+    if chatbot_type == "twitter":
+        return f"""
+    TWITTER RESPONSE REQUIREMENTS:
+    - Today's date is {current_date}.
+    - Keep the response under 200 characters.
+    - Clear, concise, and direct language.
+    - Use 1-2 relevant emojis.
+    - NO markdown formatting (e.g., no **, [], ())).
+    - Use raw URLs only (e.g., https://boomlive.in/article-url).
+    - If URL + message exceed limit, prioritize URL.
+    - Provide response in language code: {language_code}.
+    - If no results are found, reply with:
+    ❗ The claim about the [{user_query}] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.
+    Source: https://boomlive.in/fact-check
+    """
+
+    elif chatbot_type == "whatsapp":
+        return f"""
+    WHATSAPP RESPONSE TEMPLATE:
+    User's query: {user_query}
+    Date: {current_date}
+
+    REQUIREMENTS:
+    - Max 300 characters including URLs.
+    - Start with 1-2 emojis.
+    - *Bold* the key verdict or fact.
+    - Clear summary in {language_code}.
+    - End with: Source: [RAW URL] (no markdown).
+    - DO NOT claim verification based on general search only.
+    - If no results:
+    ❗ *The claim about the [{user_query}] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
+    Source: https://boomlive.in/fact-check
+    """
+
+    # Default to web
+    return f"""
+    WEB RESPONSE REQUIREMENTS:
+    Please synthesize into a helpful, accurate response per BOOM's journalistic standards.
+    Use emojis for user-friendliness.
+    Provide response in: {language_code}.
+    Note: Today's date is {current_date}.
+    Format:
+    **(Article Title):** Summary
+    [Read more](URL)
+    <hr>
+    Prioritize BOOM articles first.
+    If query ({user_query}) is unrelated to any known result, reply: "Not Found."
+    Do NOT acknowledge limitations if no info is found.
+    """

@@ -6,8 +6,8 @@ import re, os
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles
-from utils import prioritize_sources, translate_text
-
+from utils import prioritize_sources, translate_text, general_query_search
+from langchain.schema import Document
 class ArticleTools:
     def __init__(self):
         pass
@@ -205,6 +205,25 @@ class ArticleTools:
             all_docs.extend(bangla_docs)
             all_sources.extend([doc.metadata.get("source", "Unknown") for doc in bangla_docs])
             print(f"Bangla documents retrieved: {len(bangla_docs)}")
+            
+        # Perform general search and collect trusted URLs
+        search_results = general_query_search(query, language_code)
+        print("SEARCH RESULTS", search_results)
+
+        if search_results and search_results.get('trusted_results'):
+            print(f"Found {len(search_results['trusted_results'])} general search results")
+            
+            # Append general search result URLs to all_sources
+            general_sources = [result['url'] for result in search_results['trusted_results']]
+            all_sources.extend(general_sources)
+
+            # Optionally, convert search results to document-like format for consistency
+            for result in search_results['trusted_results']:
+                doc = Document(
+                    page_content=result.get('snippet', ''),
+                    metadata={"source": result.get('url', 'Unknown'), "title": result.get('title', '')}
+                )
+                all_docs.append(doc)
 
         unique_sources = list(set(all_sources))
         print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
