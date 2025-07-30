@@ -20,7 +20,7 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from utils import check_rag_relevance, get_language_code, combined_relevance_and_type_check,general_query_search,get_platform_response_requirements
-load_dotenv()
+load_dotenv() 
 
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
 os.environ['TAVILY_API_KEY'] = "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"
