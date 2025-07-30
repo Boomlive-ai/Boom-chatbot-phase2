@@ -606,7 +606,7 @@ class chatbot:
                 - Focus on the most important facts only
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                - If NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
+                - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
                     ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
                     Source: https://boomlive.in/fact-check
                 """
@@ -630,7 +630,7 @@ class chatbot:
             - End with Source: [RAW URL] on a new line. No markdown.
             - Use only BOOM or Other Fact Check results to verify the claim.
             - If ONLY general search results are available, DO NOT say the claim is verified.
-            - If NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
+            - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
             ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
             Source: https://boomlive.in/fact-check
             - Make it friendly, trustworthy, and scannable for WhatsApp.
@@ -714,7 +714,7 @@ class chatbot:
             [Read more](Article2 URL here)  complete correct url
             (Add a partition line like hr tag in markdown)
             Cite sources clearly, prioritizing BOOM articles first.
-            - If user's query:{user_query} is a not related to BOOM search results ,Other Fact Check results or General Result then just reply with:"Not Found"., 
+            - If user's query:{user_query} is a claim and is a not related to BOOM search results ,Other Fact Check results or General Result then just reply with:"Not Found"., 
 
             If no relevant information is available,don't acknowledge this limitation.
             """

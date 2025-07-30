@@ -1097,7 +1097,7 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     - Clear, concise, and direct language.
     - Use 1-2 relevant emojis.
     - NO markdown formatting (e.g., no **, [], ())).
-    - Use raw URLs only (e.g., https://boomlive.in/article-url).
+    - Use raw URLs only.
     - If URL + message exceed limit, prioritize URL.
     - Provide response in language code: {language_code}.
     """
@@ -1113,7 +1113,6 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     - Start with 1-2 emojis.
     - *Bold* the key verdict or fact.
     - Clear summary in {language_code}.
-    - End with: Source: [RAW URL] (no markdown).
     - DO NOT claim verification based on general search only.
     """
 
@@ -1128,5 +1127,4 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     **(Article Title):** Summary
     [Read more](URL)
     <hr>
-    Prioritize BOOM articles first.
     """
