@@ -254,6 +254,7 @@ class chatbot:
                                     # f"If the claim or the query asked by user is general question unrelated to any fact-check or article, then tell user to ask fact check rleated claims and queries"
                                     f"If the news is 'not verified' then provide a response that says:The claim has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information. and provide this link https://boomlive.in/fact-check :"
                                     f"Provide response in language code: {lang_code}"
+                                    f"NOTE: This assistant does NOT respond to general-purpose queries such as recipes, definitions, or opinion requests. Only fact-checkable claims or news-related general questions will be processed."
                                     # f"For more details, Visit [BOOM's Fact Check](https://www.boomlive.in/fact-check) 🕵️‍♂️✨."
                                 )
                         )
