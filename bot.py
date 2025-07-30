@@ -636,7 +636,7 @@ class chatbot:
             - Make it friendly, trustworthy, and scannable for WhatsApp.
 
             EXAMPLES:
-            ✅ *Fact:* [Short answer]  
+            ✅[Short answer]  
             Source: [URL1, URL2]  complete correct urls
 
             ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*  
