@@ -124,7 +124,7 @@ class chatbot:
                         if tool_name == "rag_search":
                             # For RAG search results
                             sources_url = result.get("sources_url", [])  # First 3 URLs
-                            docs = result.get("sources_documents", [])[:3]   # First 3 documents
+                            docs = result.get("sources_documents", [])   # First 3 documents
                             
                             # Extract and format document content to minimize tokens
                             formatted_docs = []
@@ -477,12 +477,20 @@ class chatbot:
         if boom_results:
             tool_name = state.get('tool_name', '')
             if tool_name == 'rag_search' and 'rag_search' in boom_results:
+                print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                print("PART TO DEBUG")
+                print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+                print(boom_results)
+                print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
                 rag_data = boom_results['rag_search']
                 sources_urls = rag_data.get('sources_url', [])
                 sources_docs = rag_data.get('sources_documents', [])
+                print("SOURCES DOC", sources_docs)
+
                 if isTwitterMsg or isWhatsappMsg:
-                    sources_urls = sources_urls[:15]
-                    sources_docs = sources_docs[:15]
+                    sources_urls = sources_urls#sources_urls[:15]
+                    sources_docs = sources_docs#sources_docs[:15]
                 boom_sources.extend(sources_urls)
                 if sources_urls or sources_docs:
                     formatted_boom_results = ""
@@ -492,7 +500,7 @@ class chatbot:
                         formatted_boom_results += "Sources:\n"
                         for url in sources_urls:
                             formatted_boom_results += f"- {url}\n"
-                    
+  
                     # Add document excerpts
                     if sources_docs:
                         formatted_boom_results += "\nCheck for most relevant article for from below:\n"
@@ -500,7 +508,9 @@ class chatbot:
                             source = doc.get('source', 'Unknown source')
                             content = doc.get('content', 'No content available')
                             formatted_boom_results += f"From {source}:\n{content}\n\n"
-            
+                        print("BOOM FORMATEED DOCS",formatted_boom_results)
+                    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+
             elif tool_name in ['get_custom_date_range_articles', 'get_latest_articles'] and tool_name in boom_results:
                 sources_urls = boom_results[tool_name].get('sources_url', [])
                 if sources_urls:
@@ -610,7 +620,7 @@ class chatbot:
                     ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
                     Source: https://boomlive.in/fact-check
                 """
-                
+                print("TWITTER PROMPT:", human_content)
         elif isWhatsappMsg:
             print("USING WHATSAPP PROMPT")
             human_content = f"""
@@ -638,7 +648,8 @@ class chatbot:
             EXAMPLES:
             ✅[Short answer]  
             Source: [URL1, URL2]  complete correct urls
-
+            
+            if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
             ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*  
             🔗 For more details, visit: https://boomlive.in/fact-check
 

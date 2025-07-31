@@ -329,82 +329,67 @@ Answer ONLY with "True" or "False".
         # Fallback: default to generic for safety
         return True
 
-
 def general_query_search(query: str, language_code: str = "en") -> Dict[str, Any]:
-        """
-        Performs a general web search for informational queries, how-to questions, definitions, explanations, and general knowledge requests.
+    """
+    Performs a general web search for informational queries, enriched with trusted domain hints in query string
+    and post-filtered for precision.
 
-        **USE THIS TOOL FOR GENERAL QUERIES:**
-        - General information requests ("What is climate change?", "How to cook rice?")
-        - Educational queries ("Explain photosynthesis", "History of India")
-        - How-to and instructional queries ("How to apply for passport?", "Steps to start a business")
-        - Definition requests ("What does AI mean?", "Define democracy")
-        - General knowledge questions ("Who invented the telephone?", "Capital of France")
-        - Opinion-seeking queries ("Best places to visit in India", "Top universities")
-        - Comparative queries ("Difference between Android and iOS")
-        - Process explanations ("How does voting work?", "What is the procedure for...")
-        - General current affairs without specific factual claims
-        - Queries asking for lists, recommendations, or general information
-        - Questions starting with "What", "How", "Why", "Where", "When" that seek general information
-        - Educational content requests in any language
+    Parameters:
+    - query: User's general query
+    - language_code: Language code (e.g., "en", "hi", "bn")
 
-        **DO NOT USE FOR:**
-        - Specific factual claims that need verification
-        - Statements containing statistics, numbers, or percentages about recent events
-        - Claims about arrests, executions, government actions, or conflicts
-        - Content that appears to be from social media or news sources needing fact-checking
-        - Verification requests ("Is this true?", "Did this happen?")
+    Returns:
+    - Dict with filtered result list containing 'title', 'url', and 'snippet' from trusted sources
+    """
+    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print("INSIDE general_query_search")
+    print("QUERY:", query)
+    print("Language:", language_code)
+    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
-        Parameters:
-        - query: The user's general information query
-        - language_code: ISO code for language (e.g., "en", "hi", "bn")
+    import requests
+    import os
 
-        Returns:
-        - Dict with filtered result list containing 'title', 'url', and 'snippet' from trusted sources
-        """
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print("INSIDE general_query_search")
-        print("QUERY: ", query)
-        print("Language",language_code)
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        import requests
-        import os
+    serp_api_key = os.getenv("SERP_API_KEY")
+    url = "https://serpapi.com/search"
 
-        serp_api_key = os.getenv("SERP_API_KEY")
-        url = "https://serpapi.com/search"
+    trusted_domains = [
+        "bbc.com/hindi", "bbc.com/marathi", "bbc.com/news/world/asia/india",
+        "indianexpress.com", "thenewsminute.com", "thehindu.com",
+        "indiaspendhindi.com", "indiaspend.com"
+    ]
 
-        params = {
-            "q": query,
-            "location": "India",
-            "hl": language_code,
-            "gl": "in",
-            "api_key": serp_api_key,
-            "num": 10
-        }
+    # Inject domain hints into query
+    domain_filters = " OR ".join([f"site:{domain.split('/')[0]}" for domain in trusted_domains])
+    enriched_query = f"{query} ({domain_filters})"
 
-        response = requests.get(url, params=params)
-        data = response.json()
+    params = {
+        "q": enriched_query,
+        "location": "India",
+        "hl": language_code,
+        "gl": "in",
+        "api_key": serp_api_key,
+        "num": 10
+    }
 
-        trusted_domains = [
-            "bbc.com/hindi", "bbc.com/marathi", "bbc.com/news/world/asia/india",
-            "indianexpress.com", "thenewsminute.com", "thehindu.com",
-            "indiaspendhindi.com", "indiaspend.com"
-        ]
+    response = requests.get(url, params=params)
+    data = response.json()
 
-        results = []
-        if "organic_results" in data:
-            for item in data["organic_results"]:
-                url = item.get("link", "")
-                if any(domain in url for domain in trusted_domains):
-                    results.append({
-                        "title": item.get("title", ""),
-                        "url": url,
-                        "snippet": item.get("snippet", "")
-                    })
-        print("Results: ",results)
-        return {"trusted_results": results}
-    
-    
+    # Post-filtering based on exact trusted URLs
+    results = []
+    if "organic_results" in data:
+        for item in data["organic_results"]:
+            url = item.get("link", "")
+            if any(domain in url for domain in trusted_domains):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": url,
+                    "snippet": item.get("snippet", "")
+                })
+
+    print("Results:", results)
+    return {"trusted_results": results}
+  
 from langchain.schema import HumanMessage
 
 def combined_relevance_and_type_check(query, sources_url, sources_documents, llm):
