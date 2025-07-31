@@ -618,7 +618,7 @@ class chatbot:
                 - Count characters carefully to ensure nothing gets cut off
                 - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
                     ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-                    Source: https://boomlive.in/fact-check
+                    More Info: https://boomlive.in/fact-check
                 """
                 print("TWITTER PROMPT:", human_content)
         elif isWhatsappMsg:
@@ -637,17 +637,14 @@ class chatbot:
             - Begin with 1-2 context-appropriate emojis.
             - *Bold* the key verdict or main fact (use asterisks).
             - Add a short, simple, clear summary in the user's language ({language_code}).
-            - End with Source: [RAW URL] on a new line. No markdown.
+            - End with Related Articles: [RAW URL which related to response and user query the most even if its not from boomlive] on a new line. No markdown.
             - Use only BOOM or Other Fact Check results to verify the claim.
             - If ONLY general search results are available, DO NOT say the claim is verified.
             - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
-            ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-            Source: https://boomlive.in/fact-check
             - Make it friendly, trustworthy, and scannable for WhatsApp.
 
             EXAMPLES:
-            ✅[Short answer]  
-            Source: [URL1, URL2]  complete correct urls
+            ✅[Short answer for user query][URL which totally relates to the answer for user query] 
             
             if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
             ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*  
