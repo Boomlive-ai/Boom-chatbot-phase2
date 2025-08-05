@@ -881,6 +881,7 @@ def check_boom_verification_status(response_content: str) -> bool:
         "team is reviewing it",       # partial match
         "unverified information",      # general pattern
         "no verified information",
+        "couldn't find any verified",
         "not found"
     ]
     

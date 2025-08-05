@@ -619,7 +619,7 @@ class chatbot:
                 - Count characters carefully to ensure nothing gets cut off
                 - if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
                 🔍 We couldn't find any verified fact-checks for this topic at the moment. But good news, our fact-checking team 🕵‍♀️ is on it! 
-                    Any updates will be shared here as soon as available. Thank you for your patience while we dig deeper! 🙏✨
+                    Any updates will be shared here as soon as available. Thank you for your patience! 🙏✨
                     https://boomlive.in/fact-check
                 """
                 print("TWITTER PROMPT:", human_content)
@@ -647,7 +647,7 @@ class chatbot:
             if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
             🔍 We couldn't find any verified fact-checks for this topic at the moment. But good news, our fact-checking team 🕵‍♀️ is on it! 
 
-                Any updates will be shared here as soon as available. Thank you for your patience while we dig deeper! 🙏✨
+                Any updates will be shared here as soon as available. Thank you for your patience! 🙏✨
 
                 https://boomlive.in/fact-check
 
