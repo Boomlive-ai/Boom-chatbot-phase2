@@ -618,8 +618,9 @@ class chatbot:
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
                 - if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
-                    ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-                    More Info: https://boomlive.in/fact-check
+                🔍 We couldn't find any verified fact-checks for this topic at the moment. But good news, our fact-checking team 🕵‍♀️ is on it! 
+                    Any updates will be shared here as soon as available. Thank you for your patience while we dig deeper! 🙏✨
+                    https://boomlive.in/fact-check
                 """
                 print("TWITTER PROMPT:", human_content)
         elif isWhatsappMsg:
@@ -644,8 +645,11 @@ class chatbot:
             ✅[Short answer for user query][URL which totally relates to the answer for user query] 
             
             if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
-            ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*  
-            🔗 For more details, visit: https://boomlive.in/fact-check
+            🔍 We couldn't find any verified fact-checks for this topic at the moment. But good news, our fact-checking team 🕵‍♀️ is on it! 
+
+                Any updates will be shared here as soon as available. Thank you for your patience while we dig deeper! 🙏✨
+
+                https://boomlive.in/fact-check
 
             
             """
