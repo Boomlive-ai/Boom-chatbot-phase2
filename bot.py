@@ -250,6 +250,7 @@ class chatbot:
                                     f"Please do not forget to add emojis to make response user friendly"
                                     f"Make sure you are using BOOM and not Boomlive in Response"
                                     f"Do not provide any information outside BOOM's published fact-checks and articles."
+                                    f"Focus on providing most relevent boomlive article link if present or other articl"
                                     # f"If user's query is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then mark it as not verified"
                                     # f"If the claim or the query asked by user is general question unrelated to any fact-check or article, then tell user to ask fact check rleated claims and queries"
                                     f"If the news is 'not verified' then provide a response that says:The claim has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information. and provide this link https://boomlive.in/fact-check :"
@@ -606,17 +607,17 @@ class chatbot:
                 - Include 1-2 relevant emojis to make it engaging
                 - NO markdown formatting (no **, [], (), etc.)
                 - Make it conversational and direct
-                - IMPORTANT: For URLs, use ONLY the raw URL (e.g., https://www.boomlive.in/article-url)
+                - IMPORTANT: For URLs, use ONLY the raw URL (RAW URL from boomlive which is most releveant or else provide link from any other sources if present)
                 - DO NOT use markdown link format like [text](url) - Twitter doesn't support this
                 - Twitter will automatically shorten and make URLs clickable but provide complete correct url
                 - If including a source URL, ensure the COMPLETE raw URL fits within the 200 character limit
                 - If the content + full URL exceeds 200 characters, prioritize the URL and shorten the message
                 - Alternative: You can skip the source URL and focus on the key message if space is tight
                 - Provide the response in language code: {language_code}
-                - Focus on the most important facts only
+                - Focus on providing most relevent boomlive article link if present or other articl
                 - Make it shareable and engaging for Twitter audience
                 - Count characters carefully to ensure nothing gets cut off
-                - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
+                - if User's query: {user_query} is not addressed properly by any results provided (BOOM search results, Other Fact Check results, General Search results) then reply:
                     ❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
                     More Info: https://boomlive.in/fact-check
                 """
@@ -636,11 +637,7 @@ class chatbot:
             - Maximum length: 300 characters (including any URLs).
             - Begin with 1-2 context-appropriate emojis.
             - *Bold* the key verdict or main fact (use asterisks).
-            - Add a short, simple, clear summary in the user's language ({language_code}).
-            - End with Related Articles: [RAW URL which related to response and user query the most even if its not from boomlive] on a new line. No markdown.
-            - Use only BOOM or Other Fact Check results to verify the claim.
-            - If ONLY general search results are available, DO NOT say the claim is verified.
-            - If User's query is a claim and if NO results of any kind are found (no BOOM, no fact-check, and no general results), reply with:
+ 
             - Make it friendly, trustworthy, and scannable for WhatsApp.
 
             EXAMPLES:
