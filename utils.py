@@ -191,7 +191,10 @@ def fetch_latest_article_urls(article_type: str, language_code: str = "en"):
                 
                 if article_type == "all":
                     urls.append(url_path)  # Include all URLs
-                elif url_path and f"{api_domain}/{article_type}" in url_path:
+                elif article_type == "scamcheck" and url_path and f"{api_domain}/decode/scamcheck" in url_path:
+                    print("This is a scam check article", url_path)
+                    urls.append(url_path)
+                elif article_type != "scamcheck" and url_path and f"{api_domain}/{article_type}" in url_path:
                     urls.append(url_path)
 
     except requests.exceptions.RequestException as e:

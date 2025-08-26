@@ -274,7 +274,7 @@ class ArticleTools:
         - The user asks for the latest news.
         - Example Queries: "Provide Latest Articles", "Provide latest factchecks", "Provide latest explianers"
         Parameters:
-        - article_type: <fact-check/law/explainers/decode/mediabuddhi/web-stories/boom-research/deepfake-tracker/all>
+        - article_type: <fact-check/law/explainers/decode/mediabuddhi/web-stories/boom-research/deepfake-tracker/scamcheck/all>
         Provide one keyword from the list if present in the query or related to any word in the query. If not related to any specific type, return 'all'. Note: If query has "boom-report" then use "boom-research".
         - language_code: A short code for the language of the query. Supported values are:
                 - "en" for English
