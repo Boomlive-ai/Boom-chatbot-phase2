@@ -6,7 +6,7 @@ import google.generativeai as genai
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from fastapi.middleware.cors import CORSMiddleware
-
+from FAQVectorStore import store_faq, search_faq
 from utils import prioritize_sources,check_boom_verification_status,store_unverified_content_to_sheets,test_google_sheets_manually
 app = FastAPI(debug=True)
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
@@ -33,6 +33,17 @@ class Document(BaseModel):
 
 class MultiDocInput(BaseModel):
     docs: List[Document]
+class FAQInput(BaseModel):
+    question: str
+    answer: str
+class FAQItem(BaseModel):
+    question: str
+    answer: str
+class FAQBatch(BaseModel):
+    faqs: List[FAQItem]
+class FAQQuery(BaseModel):
+    query: str
+    top_k: int = 3
 
 @app.post("/store-docs")
 async def store_docs(input_data: MultiDocInput):
@@ -209,7 +220,45 @@ async def test_serp_api(
         return {"status": "success", "results": result}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+    
 
+@app.post("/faq/store")
+async def store_faq_route(faq: FAQInput):
+    """
+    Store a single FAQ in the vector store.
+    """
+    try:
+        result = store_faq(faq.question, faq.answer)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/faq/search")
+async def search_faq_route(query: str, top_k: int = 3):
+    """
+    Search FAQs in the vector store.
+    """
+    try:
+        result = search_faq(query=query, top_k=top_k)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/faq/store-bulk")
+async def store_bulk_faqs(batch: FAQBatch):
+    """
+    Store multiple FAQs in the vector store.
+    """
+    results = []
+    for faq in batch.faqs:
+        try:
+            result = store_faq(faq.question, faq.answer)
+            results.append({"question": faq.question, "status": "success", "id": result["id"]})
+        except Exception as e:
+            results.append({"question": faq.question, "status": "error", "message": str(e)})
+    return {"stored": len(results), "details": results}
 
 # @app.get("/test-google-sheets")
 # async def test_google_sheets_endpoint():
