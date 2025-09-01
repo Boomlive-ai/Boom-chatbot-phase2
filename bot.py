@@ -155,7 +155,7 @@ class chatbot:
                                     formatted_faqs.append({
                                         "id": faq_item.get("id", ""),
                                         "question": faq_item.get("question", ""),
-                                        "answer": faq_item.get("answer", "")[:500] + "..." if len(faq_item.get("answer", "")) > 500 else faq_item.get("answer", ""),
+                                        "answer": faq_item.get("answer", ""),
                                         "created_at": faq_item.get("created_at", ""),
                                         "score": faq_item.get("score")
                                     })
@@ -927,20 +927,30 @@ class chatbot:
             
             
         if tool_name == 'faq_scam_search':
-            human_content += f"""
+            human_content = f"""
             
+           This is the results of question and answer:
+            {formatted_boom_results}
+
+            This is the user query but please dont mention it in response just provide answer from results: 
+            {user_query}
+
             Please provide the FAQ information in a clean, numbered format without "Read more" links.
             Use this exact format for each FAQ:
-        
+            
             [Full detailed answer with all the information including signs, symptoms, what to do, etc.]
 
             Requirements:
-            - Include the complete question as the title
-            - Provide the full detailed answer with all sections (Signs, What to Do, etc.) for query: {user_query}
+            - Provide the full detailed answer with all sections (Signs, What to Do, etc.) directly from results for query: {user_query}
             - Do NOT add any "Read more" links or URLs
             - Use emojis appropriately to make it user-friendly
             - Provide response in language code: {language_code}
             - Keep the original formatting and structure of the answers
+            
+            Formatting based on chatbot type:
+            - If {chatbot_type} == "web": use normal markdown 
+            - If {chatbot_type} == "whatsapp": Use plain text with *bold*, _italics_, and emojis
+            - If {chatbot_type} == "twitter": Keep it concise, numbered, and add hashtags if relevant
             """  
         print("Human content prepared for LLM invocation", human_content)
         # Prepare input messages with system message included

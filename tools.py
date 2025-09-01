@@ -25,25 +25,28 @@ class ArticleTools:
         - How Scammers Trick People on Social Media
         - How to Detect and Handle Online Impersonation
         - How to Spot Fake Messages on WhatsApp
-        - How Fraudsters Steal Bank Details Through Phishing
-        - How Scammers Use OTP Fraud
-        - How to Identify Loan App Scams
-        - How to Recognize Investment Frauds
-        - How to Avoid Job Scams
-        - How to Stay Safe from Online Shopping Frauds
-        - How to Spot Dating and Romance Scams
-        - How to Identify Tech Support Scams
-        - How Scammers Target Seniors
+        - How to Tell if an Online Giveaway or Contest Is Fake
+        - How to Spot Fake Job Offers Online
+        - What to Do If You Click a Suspicious Link
+        - How to Spot Dangerous Apps or APKs
+        - How to Know if a Shopping Website Is Genuine
+        - How Scammers Trick People in Banking Scams
+        - How to Check if a Payment Link or QR Code Is Safe
+        - What to Do If You Get a Fake Bank Call or SMS
+        - How to Spot Fake UPI Payment Requests
+        - How Fake Loan and Investment Scams Work
+        - What Is A “Digital Arrest”? Is It Legal?
+        - How to Stay Safe From “Digital Arrest”?
+        - How to Confirm if Something Is a Scam Safely
+        - How to Keep Your Personal Information Safe
+        - What to Do If You Shared OTP or PIN by Mistake
+        - Common Mistakes People Make with Scams
+        - How to Tell If a Charity Appeal Is Fake
+        - What Are Fake Tech Support Scams
         - How Lottery and Prize Scams Work
-        - How Crypto Frauds Work
-        - How to Detect Courier Frauds
-        - How to Spot Electricity Bill Fraud
-        - How Scammers Cheat with QR Codes
-        - How Insurance Frauds Work
-        - How Fake Charities Scam People
-        - How SIM Swap Frauds Happen
-        - How Matrimonial Frauds Work
-        - How Gaming Scams Target Kids
+        - How to Tell If a Family Emergency Message Is Real
+        - How to Tell If an Email Is Real
+
 
         This tool is optimized for scam-related FAQs and fraud awareness topics. It performs semantic search over a curated vector store of verified answers.
 
