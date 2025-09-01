@@ -147,6 +147,8 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
         }
         if used_google_fact_check and fact_check_results:
             response_payload["fact_check_results"] = fact_check_results
+            
+        print("ENVIRONMENT VARIABLES IN OS",os.environ)
         return response_payload
     except KeyError:
         raise HTTPException(status_code=404, detail="Thread ID not found.")

@@ -1,11 +1,11 @@
-import datetime, requests, re
+import requests, re
 from bs4 import BeautifulSoup
 from langchain_core.messages import HumanMessage
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from langdetect import detect, LangDetectException
 from typing import List, Dict, Tuple, Optional
-from datetime import datetime
+from datetime import datetime,date,timedelta
 
 def get_language_code(text):
     """
@@ -38,8 +38,8 @@ def validate_date_range(from_date: str, to_date: str) -> bool:
         bool: True if valid, False otherwise.
     """
     try:
-        from_dt = datetime.datetime.strptime(from_date, '%Y-%m-%d')
-        to_dt = datetime.datetime.strptime(to_date, '%Y-%m-%d')
+        from_dt = datetime.strptime(from_date, '%Y-%m-%d')
+        to_dt = datetime.strptime(to_date, '%Y-%m-%d')
         return from_dt <= to_dt
     except ValueError:
         return False
@@ -77,11 +77,12 @@ def fetch_custom_range_articles_urls(from_date: str = None, to_date: str = None,
 
     print("fetch_custom_range_articles_urls", from_date, to_date, article_type)
     # Calculate default date range if not provided
-    current_date = datetime.date.today()
+    current_date = date.today()
+    print("CURRENT DATE:",current_date)
     if not to_date:
         to_date = current_date.strftime('%Y-%m-%d')
     if not from_date:
-        custom_months_ago = current_date - datetime.timedelta(days=180)  # Default to 6 months ago
+        custom_months_ago = current_date - timedelta(days=180)  # Default to 6 months ago
         from_date = custom_months_ago.strftime('%Y-%m-%d')
 
     # Validate the date range
@@ -1081,7 +1082,7 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     if chatbot_type == "twitter":
         return f"""
     TWITTER RESPONSE REQUIREMENTS:
-    - Today's date is {current_date}.
+    - Provide responses considering the current date as {current_date}.
     - Keep the response under 200 characters.
     - Clear, concise, and direct language.
     - Use 1-2 relevant emojis.
@@ -1095,7 +1096,7 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
         return f"""
     WHATSAPP RESPONSE TEMPLATE:
     User's query: {user_query}
-    Date: {current_date}
+   Provide responses considering the current date as {current_date}.
 
     REQUIREMENTS:
     - Max 300 characters including URLs.
@@ -1111,9 +1112,35 @@ def get_platform_response_requirements(chatbot_type: str, current_date: str, use
     Please synthesize into a helpful, accurate response per BOOM's journalistic standards.
     Use emojis for user-friendliness.
     Provide response in: {language_code}.
-    Note: Today's date is {current_date}.
+    Provide responses considering the current date as {current_date}.
     Format:
     **(Article Title):** Summary
     [Read more](URL)
     <hr>
     """
+
+
+FAQ_TRIGGER_QUESTIONS = [
+    "How Scammers Trick People on Social Media",
+    "How to Detect and Handle Online Impersonation",
+    "How to Spot Fake Messages on WhatsApp",
+    "How Fraudsters Steal Bank Details Through Phishing",
+    "How Scammers Use OTP Fraud",
+    "How to Identify Loan App Scams",
+    "How to Recognize Investment Frauds",
+    "How to Avoid Job Scams",
+    "How to Stay Safe from Online Shopping Frauds",
+    "How to Spot Dating and Romance Scams",
+    "How to Identify Tech Support Scams",
+    "How Scammers Target Seniors",
+    "How Lottery and Prize Scams Work",
+    "How Crypto Frauds Work",
+    "How to Detect Courier Frauds",
+    "How to Spot Electricity Bill Fraud",
+    "How Scammers Cheat with QR Codes",
+    "How Insurance Frauds Work",
+    "How Fake Charities Scam People",
+    "How SIM Swap Frauds Happen",
+    "How Matrimonial Frauds Work",
+    "How Gaming Scams Target Kids"
+]

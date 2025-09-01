@@ -7,11 +7,54 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles
 from utils import prioritize_sources, translate_text, general_query_search
+from FAQVectorStore import search_faq
+from dotenv import load_dotenv
+load_dotenv() 
+
 from langchain.schema import Document
 class ArticleTools:
     def __init__(self):
         pass
-    
+    @staticmethod
+    @tool
+    def faq_scam_search(query: str, top_k: int = 3) -> Dict[str, Any]:
+        """
+        Searches the FAQ vector store for relevant answers for scam seacrh questions.
+
+        **USE THIS TOOL WHEN THE QUERY MATCHES OR RELATES TO ANY OF THE FOLLOWING:**
+        - How Scammers Trick People on Social Media
+        - How to Detect and Handle Online Impersonation
+        - How to Spot Fake Messages on WhatsApp
+        - How Fraudsters Steal Bank Details Through Phishing
+        - How Scammers Use OTP Fraud
+        - How to Identify Loan App Scams
+        - How to Recognize Investment Frauds
+        - How to Avoid Job Scams
+        - How to Stay Safe from Online Shopping Frauds
+        - How to Spot Dating and Romance Scams
+        - How to Identify Tech Support Scams
+        - How Scammers Target Seniors
+        - How Lottery and Prize Scams Work
+        - How Crypto Frauds Work
+        - How to Detect Courier Frauds
+        - How to Spot Electricity Bill Fraud
+        - How Scammers Cheat with QR Codes
+        - How Insurance Frauds Work
+        - How Fake Charities Scam People
+        - How SIM Swap Frauds Happen
+        - How Matrimonial Frauds Work
+        - How Gaming Scams Target Kids
+
+        This tool is optimized for scam-related FAQs and fraud awareness topics. It performs semantic search over a curated vector store of verified answers.
+
+        Parameters:
+        - query: The user's question
+        - top_k: Number of top results to return
+
+        Returns:
+        - Dict with matched FAQs including question, answer, and score
+        """
+        return search_faq(query=query, top_k=top_k)
     @staticmethod
     @tool
     def general_query_search(query: str, language_code: str = "en") -> Dict[str, Any]:
@@ -128,7 +171,7 @@ class ArticleTools:
         Returns:
         - Relevant articles and sources that can verify or fact-check the specific claims
         """
-
+        
         print("Inside rag_search",query, language_code, original_message)
         query = original_message if original_message else query
     # Prepare queries for each language (use provided translations or fallback to original)
@@ -148,19 +191,23 @@ class ArticleTools:
 
         latest_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_LATEST_INDEX_NAME"),
-            embedding=OpenAIEmbeddings(model="text-embedding-3-small")
+            embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+            pinecone_api_key="829bebca-aceb-4416-8e78-b1972af62abc"
         )
         old_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_OLD_INDEX_NAME"),
-            embedding=OpenAIEmbeddings(model="text-embedding-3-small")
+            embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+            pinecone_api_key="829bebca-aceb-4416-8e78-b1972af62abc"
         )
         hindi_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_HINDI_INDEX_NAME"),
-            embedding=OpenAIEmbeddings(model="text-embedding-3-small")
+            embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+            pinecone_api_key="829bebca-aceb-4416-8e78-b1972af62abc"
         )
         bangla_index = PineconeVectorStore(
             index_name=os.getenv("PINECONE_BANGLA_INDEX_NAME"),
-            embedding=OpenAIEmbeddings(model="text-embedding-3-small")
+            embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+            pinecone_api_key="829bebca-aceb-4416-8e78-b1972af62abc"
         )
         index_to_use = "both"
         if language_code=='hi':

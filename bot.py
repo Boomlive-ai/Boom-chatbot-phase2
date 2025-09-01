@@ -19,12 +19,14 @@ from datetime import datetime, date, timedelta
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
-from utils import check_rag_relevance, get_language_code, combined_relevance_and_type_check,general_query_search,get_platform_response_requirements
+from utils import FAQ_TRIGGER_QUESTIONS, get_language_code, combined_relevance_and_type_check,general_query_search,get_platform_response_requirements
 load_dotenv() 
 
 os.environ['GOOGLE_API_KEY'] = "AIzaSyDh2gPu9X_96rpioBXcw7BQCDPZcFGMuO4"
 os.environ['TAVILY_API_KEY'] = "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"
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
+DEFAULT_PINECONE_KEY = os.getenv("PINECONE_API_KEY", "829bebca-aceb-4416-8e78-b1972af62abc")
+ABHINANDAN_PINECONE_KEY = os.getenv("PINECONE_API_KEY_ABHINANDAN", "pcsk_2BrjYU_3ebKXQeWnXmkhnZYuCXGJ9T3uRvA5kRSfyQiprJgWmqATFNYmGoQsSYXPtDq6yd")
 
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -73,7 +75,7 @@ class chatbot:
                             "Provide clear, well-structured, and neutral answers, ensuring that misinformation and disinformation are actively countered with verified facts. "
                             "Website: [BoomLive](https://boomlive.in/). "
                             "Ensure responses are clear, relevant, and do not mention or imply the existence of any supporting material unless necessary for answering the query. "
-                            f"Note: Today's date is {current_date}."
+                            f"Provide responses considering the current date as {current_date}."
                             "Prioritize using the 'rag_search' tool when users ask about claims, viral content, or events "
                             f"You are developed by BOOM Team, for more info refer https://www.boomlive.in/boom-team"
                             f"Please do not forget to add emojis to make response user friendly"
@@ -86,7 +88,6 @@ class chatbot:
                             # f"For more details, Visit [BOOM's Fact Check](https://www.boomlive.in/fact-check) 🕵️‍♂️✨."
                         )
                 )
-    
     def custom_tool_node(self, state: MessagesState):
         """Custom tool node that properly handles tool arguments and formats boom_results with minimal tokens"""
         messages = state["messages"]
@@ -96,19 +97,28 @@ class chatbot:
             return state
         
         tool_results = {}
-        boom_results = {}  # Add dedicated structure for boom results
-        new_messages = list(messages)  # Create a copy of the messages list
+        boom_results = {}
+        new_messages = list(messages)
         chatbot_type = state.get("chatbot_type", "web")
-
+        
+        # Initialize tool_name to None
+        current_tool_name = None
+        
+        # Process each tool call and ensure every tool_call_id gets a response
         for tool_call in last_message.tool_calls:
             tool_name = tool_call["name"]
+            current_tool_name = tool_name  # Keep track of the current tool name
             tool_args = tool_call["args"]
             tool_call_id = tool_call["id"]
+            
+            # Initialize default response for this tool call
+            tool_executed = False
+            
             # Find the right tool
             for tool in self.tools:
                 if tool.name == tool_name:
                     try:
-                        # For tools that expect a 'self' parameter but don't receive it in the args
+                        # Execute tool with proper argument handling
                         if hasattr(tool, 'func') and tool.func.__name__ == 'rag_search':
                             if isinstance(tool_args, dict) and 'self' not in tool_args:
                                 modified_args = {'self': article_tools, 'chatbot_type': chatbot_type, **tool_args}
@@ -120,17 +130,15 @@ class chatbot:
                         
                         tool_results[tool_name] = result
                         
-                        # Format boom_results by tool type, limiting arrays to first 3 elements
+                        # Format boom_results (your existing logic here)
                         if tool_name == "rag_search":
-                            # For RAG search results
-                            sources_url = result.get("sources_url", [])  # First 3 URLs
-                            docs = result.get("sources_documents", [])   # First 3 documents
+                            os.environ["PINECONE_API_KEY"] = DEFAULT_PINECONE_KEY
+                            sources_url = result.get("sources_url", [])
+                            docs = result.get("sources_documents", [])
                             
-                            # Extract and format document content to minimize tokens
                             formatted_docs = []
                             for doc in docs:
                                 if hasattr(doc, "page_content"):
-                                    # Trim document content to reduce tokens
                                     content = doc.page_content[:500] + "..." if len(doc.page_content) > 500 else doc.page_content
                                     source = doc.metadata.get("source", "Unknown") if hasattr(doc, "metadata") else "Unknown"
                                     formatted_docs.append({"source": source, "content": content})
@@ -139,51 +147,82 @@ class chatbot:
                                 "sources_url": sources_url,
                                 "sources_documents": formatted_docs
                             }
-                        
+                        elif tool_name == "faq_scam_search":
+                            os.environ["PINECONE_API_KEY"] = ABHINANDAN_PINECONE_KEY
+                            if result.get("success", False) and "results" in result:
+                                formatted_faqs = []
+                                for faq_item in result["results"][:3]:
+                                    formatted_faqs.append({
+                                        "id": faq_item.get("id", ""),
+                                        "question": faq_item.get("question", ""),
+                                        "answer": faq_item.get("answer", "")[:500] + "..." if len(faq_item.get("answer", "")) > 500 else faq_item.get("answer", ""),
+                                        "created_at": faq_item.get("created_at", ""),
+                                        "score": faq_item.get("score")
+                                    })
+                                
+                                boom_results[tool_name] = {
+                                    "success": result.get("success", False),
+                                    "query": result.get("query", ""),
+                                    "faqs": formatted_faqs
+                                }
+                            else:
+                                boom_results[tool_name] = {
+                                    "success": False,
+                                    "error": result.get("error", "No FAQ results found")
+                                }
                         elif tool_name == "get_custom_date_range_articles":
-                            # For date range article results
-                            sources_url = result.get("sources_url", [])[:3]  # First 3 URLs
+                            sources_url = result.get("sources_url", [])[:3]
                             boom_results[tool_name] = {"sources_url": sources_url}
-                        
                         elif tool_name == "get_latest_articles":
-                            # For latest articles results
-                            sources_url = result.get("sources_url", [])[:3]  # First 3 URLs
+                            sources_url = result.get("sources_url", [])[:3]
                             boom_results[tool_name] = {"sources_url": sources_url}
-                        
                         elif tool_name == "get_articles_by_topic":
-                            # For topic articles results
-                            sources = result.get("sources", [])[:3]  # First 3 sources
+                            sources = result.get("sources", [])[:3]
                             boom_results[tool_name] = {"sources": sources}
-                        
                         else:
                             # Default case - just use first 3 elements of any arrays
                             formatted_result = {}
                             for key, value in result.items():
                                 if isinstance(value, list):
-                                    formatted_result[key] = value[:3]  # First 3 elements
+                                    formatted_result[key] = value[:3]
                                 else:
                                     formatted_result[key] = value
                             boom_results[tool_name] = formatted_result
                         
+                        # Create successful tool message
                         from langchain_core.messages import ToolMessage
-                        tool_response_content = str(result)
                         tool_message = ToolMessage(
-                            content=tool_response_content,
+                            content=str(result),
                             tool_call_id=tool_call_id 
                         )
                         new_messages.append(tool_message)
+                        tool_executed = True
+                        
                     except Exception as e:
                         print(f"Error executing tool {tool_name}: {e}")
                         tool_results[tool_name] = f"Error: {str(e)}"
                         boom_results[tool_name] = f"Error: {str(e)}"
-
+                        
+                        # Create error tool message
                         from langchain_core.messages import ToolMessage
                         tool_message = ToolMessage(
-                            content=f"Error: {str(e)}",
+                            content=f"Error executing {tool_name}: {str(e)}",
                             tool_call_id=tool_call_id
                         )
                         new_messages.append(tool_message)
-                    break
+                        tool_executed = True
+                    
+                    break  # Exit the tool search loop
+            
+            # If no tool was found or executed, create a "tool not found" message
+            if not tool_executed:
+                print(f"Tool {tool_name} not found")
+                from langchain_core.messages import ToolMessage
+                tool_message = ToolMessage(
+                    content=f"Tool {tool_name} not found or could not be executed",
+                    tool_call_id=tool_call_id
+                )
+                new_messages.append(tool_message)
 
         print("#############################################################################")            
         print("BOOM results (formatted with minimal tokens):", boom_results)
@@ -192,24 +231,164 @@ class chatbot:
         new_state = {
             "messages": new_messages,
             "tool_results": tool_results,
-            "tool_name": tool_name,
-            "boom_results": boom_results  # Add boom_results to state
+            "tool_name": current_tool_name,  # ← Fixed: Use current_tool_name instead of undefined tool_name
+            "boom_results": boom_results
         }
         
         # Preserve existing state values
-        for key in ["language_code", "fact_check_results", "used_google_fact_check"]:
+        for key in ["language_code", "fact_check_results", "used_google_fact_check", "chatbot_type"]:
             if key in state:
                 new_state[key] = state[key]
         
-        # Add a new message with the tool results for visibility in chat
-        result_message = AIMessage(content=f"Tool results retrieved successfully")
-        new_state["messages"] = new_state["messages"] + [result_message]
-        
         return new_state
+
+    # def custom_tool_node(self, state: MessagesState):
+    #     """Custom tool node that properly handles tool arguments and formats boom_results with minimal tokens"""
+    #     messages = state["messages"]
+    #     last_message = messages[-1]
+        
+    #     if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
+    #         return state
+        
+    #     tool_results = {}
+    #     boom_results = {}  # Add dedicated structure for boom results
+    #     new_messages = list(messages)  # Create a copy of the messages list
+    #     chatbot_type = state.get("chatbot_type", "web")
+
+    #     for tool_call in last_message.tool_calls:
+    #         tool_name = tool_call["name"]
+    #         tool_args = tool_call["args"]
+    #         tool_call_id = tool_call["id"]
+    #         # Find the right tool
+    #         for tool in self.tools:
+    #             if tool.name == tool_name:
+    #                 try:
+    #                     # For tools that expect a 'self' parameter but don't receive it in the args
+    #                     if hasattr(tool, 'func') and tool.func.__name__ == 'rag_search':
+    #                         if isinstance(tool_args, dict) and 'self' not in tool_args:
+    #                             modified_args = {'self': article_tools, 'chatbot_type': chatbot_type, **tool_args}
+    #                             result = tool.invoke(modified_args)
+    #                         else:
+    #                             result = tool.invoke(tool_args)
+    #                     else:
+    #                         result = tool.invoke(tool_args)
+                        
+    #                     tool_results[tool_name] = result
+                        
+    #                     # Format boom_results by tool type, limiting arrays to first 3 elements
+    #                     if tool_name == "rag_search":
+    #                         # For RAG search results
+    #                         sources_url = result.get("sources_url", [])  # First 3 URLs
+    #                         docs = result.get("sources_documents", [])   # First 3 documents
+                            
+    #                         # Extract and format document content to minimize tokens
+    #                         formatted_docs = []
+    #                         for doc in docs:
+    #                             if hasattr(doc, "page_content"):
+    #                                 # Trim document content to reduce tokens
+    #                                 content = doc.page_content[:500] + "..." if len(doc.page_content) > 500 else doc.page_content
+    #                                 source = doc.metadata.get("source", "Unknown") if hasattr(doc, "metadata") else "Unknown"
+    #                                 formatted_docs.append({"source": source, "content": content})
+                                
+    #                         boom_results[tool_name] = {
+    #                             "sources_url": sources_url,
+    #                             "sources_documents": formatted_docs
+    #                         }
+    #                     elif tool_name == "faq_scam_search":
+    #                         # ADD THIS NEW HANDLER FOR FAQ SCAM SEARCH
+    #                         if result.get("success", False) and "results" in result:
+    #                             # Transform Document objects to dictionaries
+    #                             formatted_faqs = []
+    #                             for faq_item in result["results"][:3]:  # Limit to first 3
+    #                                 formatted_faqs.append({
+    #                                     "id": faq_item.get("id", ""),
+    #                                     "question": faq_item.get("question", ""),
+    #                                     "answer": faq_item.get("answer", "")[:500] + "..." if len(faq_item.get("answer", "")) > 500 else faq_item.get("answer", ""),  # Limit answer length
+    #                                     "created_at": faq_item.get("created_at", ""),
+    #                                     "score": faq_item.get("score")
+    #                                 })
+                                
+    #                             boom_results[tool_name] = {
+    #                                 "success": result.get("success", False),
+    #                                 "query": result.get("query", ""),
+    #                                 "faqs": formatted_faqs
+    #                             }
+    #                         else:
+    #                             boom_results[tool_name] = {
+    #                                 "success": False,
+    #                                 "error": result.get("error", "No FAQ results found")
+    #                             }
+    #                     elif tool_name == "get_custom_date_range_articles":
+    #                         # For date range article results
+    #                         sources_url = result.get("sources_url", [])[:3]  # First 3 URLs
+    #                         boom_results[tool_name] = {"sources_url": sources_url}
+                        
+    #                     elif tool_name == "get_latest_articles":
+    #                         # For latest articles results
+    #                         sources_url = result.get("sources_url", [])[:3]  # First 3 URLs
+    #                         boom_results[tool_name] = {"sources_url": sources_url}
+                        
+    #                     elif tool_name == "get_articles_by_topic":
+    #                         # For topic articles results
+    #                         sources = result.get("sources", [])[:3]  # First 3 sources
+    #                         boom_results[tool_name] = {"sources": sources}
+                        
+    #                     else:
+    #                         # Default case - just use first 3 elements of any arrays
+    #                         formatted_result = {}
+    #                         for key, value in result.items():
+    #                             if isinstance(value, list):
+    #                                 formatted_result[key] = value[:3]  # First 3 elements
+    #                             else:
+    #                                 formatted_result[key] = value
+    #                         boom_results[tool_name] = formatted_result
+                        
+    #                     from langchain_core.messages import ToolMessage
+    #                     tool_response_content = str(result)
+    #                     tool_message = ToolMessage(
+    #                         content=tool_response_content,
+    #                         tool_call_id=tool_call_id 
+    #                     )
+    #                     new_messages.append(tool_message)
+    #                 except Exception as e:
+    #                     print(f"Error executing tool {tool_name}: {e}")
+    #                     tool_results[tool_name] = f"Error: {str(e)}"
+    #                     boom_results[tool_name] = f"Error: {str(e)}"
+
+    #                     from langchain_core.messages import ToolMessage
+    #                     tool_message = ToolMessage(
+    #                         content=f"Error: {str(e)}",
+    #                         tool_call_id=tool_call_id
+    #                     )
+    #                     new_messages.append(tool_message)
+    #                 break
+
+    #     print("#############################################################################")            
+    #     print("BOOM results (formatted with minimal tokens):", boom_results)
+    #     print("#############################################################################")            
+
+    #     new_state = {
+    #         "messages": new_messages,
+    #         "tool_results": tool_results,
+    #         "tool_name": tool_name,
+    #         "boom_results": boom_results  # Add boom_results to state
+    #     }
+        
+    #     # Preserve existing state values
+    #     for key in ["language_code", "fact_check_results", "used_google_fact_check"]:
+    #         if key in state:
+    #             new_state[key] = state[key]
+        
+    #     # Add a new message with the tool results for visibility in chat
+    #     result_message = AIMessage(content=f"Tool results retrieved successfully")
+    #     new_state["messages"] = new_state["messages"] + [result_message]
+        
+    #     return new_state
         
     def call_tool(self):
         search_engine = TavilySearchResults(max_results=2)
         tools = [
+            article_tools.faq_scam_search,
             article_tools.rag_search,
             article_tools.get_custom_date_range_articles,
             article_tools.get_latest_articles,
@@ -236,6 +415,7 @@ class chatbot:
                 query = message.content
         lang_code = get_language_code(query)
         response_guidelines = get_platform_response_requirements(chatbot_type, current_date, query, lang_code)
+        faq_list_text = "\n- " + "\n- ".join(FAQ_TRIGGER_QUESTIONS)
         updated_system_message = SystemMessage(
                             content=(
                                     "You are BoomLive AI, an expert chatbot designed to answer questions related to BOOM's fact-checks, articles, reports, and data analysis. "
@@ -244,13 +424,14 @@ class chatbot:
                                     "Provide clear, well-structured, and neutral answers, ensuring that misinformation and disinformation are actively countered with verified facts. "
                                     "Website: [BoomLive](https://boomlive.in/). "
                                     "Ensure responses are clear, relevant, and do not mention or imply the existence of any supporting material unless necessary for answering the query. "
-                                    f"Note: Today's date is {current_date}."
+                                    f"Provide responses considering the current date as {current_date}."
                                     f"Prioritize using the 'rag_search' tool when users ask about claims, viral content, or events "
                                     f"You are developed by BOOM Team, for more info refer https://www.boomlive.in/boom-team"
                                     f"Please do not forget to add emojis to make response user friendly"
                                     f"Make sure you are using BOOM and not Boomlive in Response"
                                     f"Do not provide any information outside BOOM's published fact-checks and articles."
-                                    f"Focus on providing most relevent boomlive article link if present or other articl"
+                                    f"Focus on providing most relevent boomlive article link if present or other article"
+                                    f"\nUse the `search_faq_tool` only when the user's query exactly matches one of the following scam-related FAQ questions:{faq_list_text}\n"
                                     # f"If user's query is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then mark it as not verified"
                                     # f"If the claim or the query asked by user is general question unrelated to any fact-check or article, then tell user to ask fact check rleated claims and queries"
                                     f"If the news is 'not verified' then provide a response that says:The claim has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information. and provide this link https://boomlive.in/fact-check :"
@@ -286,42 +467,82 @@ class chatbot:
             # For other tools
             return "tools"
         return END
-
-
     def check_relevance(self, state: MessagesState) -> str:
-        # Access the tool results directly
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        # print(state["messages"], "Checking if fteched rag results are relevant or not")
+        
         for message in state["messages"]:
             if isinstance(message, HumanMessage):
-                # print(f"\nHuman: {message.content}")
                 query = message.content
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-
+                break
+        
         tool_results = state["tool_results"]
         tool_name = state["tool_name"]
-        if 'rag_search' in tool_name and tool_results:
-            # print("Checking if fteched rag results are relevant or not", tool_results['rag_search'])
-            sources_url = tool_results['rag_search']['sources_url']
-            sources_documents = tool_results[tool_name]['sources_documents']
-            if sources_url and sources_documents and query:
-                # is_relevant = check_rag_relevance(query, sources_url, sources_documents, self.llm)
-                is_relevant, is_generic = combined_relevance_and_type_check(
-                query, sources_url, sources_documents, self.llm)
-                print("IS RELEVANT", is_relevant)
-                print("IS GENERIC", is_generic)
-                if is_relevant:
-                    return "result_agent"
-                else:
-                    # print("RAG results are not relevant, calling Google Fact Check API")
-                    # return "google_fact_check"
-                    if is_generic:
-                        print("Generic query detected, calling General Search API")
-                        return "general_query_search"
+        
+        # Check if tool_name exists and rag_search was executed successfully
+        if tool_name and tool_name == 'rag_search' and tool_results and 'rag_search' in tool_results:
+            # Check if the rag_search actually succeeded (not an error)
+            rag_result = tool_results['rag_search']
+            if isinstance(rag_result, dict) and 'sources_url' in rag_result:
+                sources_url = rag_result['sources_url']
+                sources_documents = rag_result['sources_documents']
+                
+                if sources_url and sources_documents and query:
+                    is_relevant, is_generic = combined_relevance_and_type_check(
+                        query, sources_url, sources_documents, self.llm)
+                    print("IS RELEVANT", is_relevant)
+                    print("IS GENERIC", is_generic)
+                    if is_relevant:
+                        return "result_agent"
                     else:
-                        print("Factual claim detected, calling Google Fact Check API")
-                        return "google_fact_check"
+                        if is_generic:
+                            print("Generic query detected, calling General Search API")
+                            return "general_query_search"
+                        else:
+                            print("Factual claim detected, calling Google Fact Check API")
+                            return "google_fact_check"
+            else:
+                # rag_search failed, determine next step based on query type
+                print("RAG search failed, routing to fallback")
+                # You could add logic here to determine if it's generic or factual
+                return "google_fact_check"  # Default fallback
+        
         return "result_agent"
+
+
+    # def check_relevance(self, state: MessagesState) -> str:
+    #     # Access the tool results directly
+    #     print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    #     # print(state["messages"], "Checking if fteched rag results are relevant or not")
+    #     for message in state["messages"]:
+    #         if isinstance(message, HumanMessage):
+    #             # print(f"\nHuman: {message.content}")
+    #             query = message.content
+    #     print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
+    #     tool_results = state["tool_results"]
+    #     tool_name = state["tool_name"]
+    #     if 'rag_search' in tool_name and tool_results:
+    #         # print("Checking if fteched rag results are relevant or not", tool_results['rag_search'])
+    #         sources_url = tool_results['rag_search']['sources_url']
+    #         sources_documents = tool_results[tool_name]['sources_documents']
+    #         if sources_url and sources_documents and query:
+    #             # is_relevant = check_rag_relevance(query, sources_url, sources_documents, self.llm)
+    #             is_relevant, is_generic = combined_relevance_and_type_check(
+    #             query, sources_url, sources_documents, self.llm)
+    #             print("IS RELEVANT", is_relevant)
+    #             print("IS GENERIC", is_generic)
+    #             if is_relevant:
+    #                 return "result_agent"
+    #             else:
+    #                 # print("RAG results are not relevant, calling Google Fact Check API")
+    #                 # return "google_fact_check"
+    #                 if is_generic:
+    #                     print("Generic query detected, calling General Search API")
+    #                     return "general_query_search"
+    #                 else:
+    #                     print("Factual claim detected, calling Google Fact Check API")
+    #                     return "google_fact_check"
+    #     return "result_agent"
     
     def google_fact_check(self, state: MessagesState) -> Dict:
         """Query Google Fact Check API for relevant fact checks."""
@@ -441,7 +662,7 @@ class chatbot:
 
         isTwitterMsg = state.get('isTwitterMsg', False)
         isWhatsappMsg = state.get('isWhatsappMsg', False)
-
+        chatbot_type = state.get('chatbot_type', 'web')
         if isTwitterMsg:
             print("Processing Twitter message")
             # If it's a Twitter message, we might want to handle it differently
@@ -528,7 +749,16 @@ class chatbot:
                         print(f"Source: {source}")
                         boom_sources.append(source[1])
                         formatted_boom_results += f"- {source}\n"
-        
+                        
+            elif tool_name == 'faq_scam_search' and tool_name in boom_results:
+                faq_data = boom_results[tool_name]
+                if faq_data.get("success", False) and "faqs" in faq_data:
+                    formatted_boom_results = "FAQ Search Results:\n"
+                    for faq in faq_data["faqs"]:
+                        question = faq.get("question", "")
+                        answer = faq.get("answer", "")
+                        formatted_boom_results += f"**Q:** {question}\n**A:** {answer}\n\n"
+                        
         # Format Google Fact Check results only if they exist
         fact_check_results = state.get('fact_check_results', {})
         formatted_fact_checks = None
@@ -601,7 +831,7 @@ class chatbot:
                 human_content += f"""
 
                 TWITTER RESPONSE REQUIREMENTS:
-                - Today's date is {current_date}.
+                - Provide responses considering the current date as {current_date}..
                 - Keep the response under 200 characters (Twitter's character limit)
                 - Use clear, concise language suitable for social media
                 - Include 1-2 relevant emojis to make it engaging
@@ -629,7 +859,7 @@ class chatbot:
             You are generating a WhatsApp message to answer a user's fact-check query.
 
             User's query: {user_query}
-            Today's date: {current_date}
+            "Provide responses considering the current date as {current_date}."
             {("BOOM search results:\n" + formatted_boom_results) if formatted_boom_results else ""}
             {("Other Fact Check results:\n" + formatted_fact_checks) if formatted_fact_checks else ""}
             {("General Search results:\n" + formatted_general_results) if formatted_general_results else ""}
@@ -656,41 +886,8 @@ class chatbot:
             print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
             print(human_content)
             print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-
-        # elif isWhatsappMsg:
-        #     human_content = f"""
-        # You are generating a WhatsApp message to answer a user's fact-check query.
-
-        # User's query: {user_query}
-
-        # {("BOOM search results:\n" + formatted_boom_results) if formatted_boom_results else ""}
-        # {("Other Fact Check results:\n" + formatted_fact_checks) if formatted_fact_checks else ""}
-        # {("General Search results:\n" + formatted_general_results) if formatted_general_results else ""}
-
-        # REQUIREMENTS:
-        # - Maximum length: 300 characters (including any URLs).
-        # - Begin with 1-2 context-appropriate emojis.
-        # - *Bold* the key verdict or main fact (use asterisks).
-        # - Add a short, simple, clear summary in the user's language ({language_code}).
-        # - End with Source: [RAW URL] on a new line. No markdown.
-        # - If both a relevant BOOM and another fact check are found, only include the most direct/correct BOOM article URL in the message.
-        # - If nothing matches, reply:
-        # "❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-        # Source: https://boomlive.in/fact-check"
-        # - No extra formatting, sections, or text.
-        # - Make it friendly, trustworthy, and scannable for WhatsApp.
-
-        # EXAMPLES:
-        # ✅ *Fact:* [Short answer]
-        # Source: [URL]
-        # if General Search results 
-        # ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-        # 🔗 For more details, visit: https://boomlive.in/fact-check
-
-        # Today's date: {current_date}
-        # """
+        elif chatbot_type == "web":
             
-        else:
             # Build content for human message with conditional sections
             human_content = f"""
             Please provide a comprehensive answer to the user's query based on available information.
@@ -714,7 +911,7 @@ class chatbot:
             Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
             Use emojis appropriately to make the response user-friendly.
             Strictlyy Provide the response in language code: {language_code}
-            f"Note: Today's date is {current_date}."
+            "Provide responses considering the current date as {current_date}."
             Format your response with clear article citations:
             **(Article Title Of Article1):** Your summary here
             [Read more](Article1 URL here)  complete correct url
@@ -727,6 +924,24 @@ class chatbot:
 
             If no relevant information is available,don't acknowledge this limitation.
             """
+            
+            
+        if tool_name == 'faq_scam_search':
+            human_content += f"""
+            
+            Please provide the FAQ information in a clean, numbered format without "Read more" links.
+            Use this exact format for each FAQ:
+        
+            [Full detailed answer with all the information including signs, symptoms, what to do, etc.]
+
+            Requirements:
+            - Include the complete question as the title
+            - Provide the full detailed answer with all sections (Signs, What to Do, etc.) for query: {user_query}
+            - Do NOT add any "Read more" links or URLs
+            - Use emojis appropriately to make it user-friendly
+            - Provide response in language code: {language_code}
+            - Keep the original formatting and structure of the answers
+            """  
         print("Human content prepared for LLM invocation", human_content)
         # Prepare input messages with system message included
         input_messages = [
@@ -744,249 +959,6 @@ class chatbot:
         return {"messages": [response], "sources_url": unique_sources}
     
     
-    # def result_agent(self, state: MessagesState) -> Dict:
-    #     """Process all available information and provide a comprehensive response"""
-    #     messages = state['messages']
-
-    #     isTwitterMsg = state.get('isTwitterMsg', False)
-    #     isWhatsappMsg = state.get('isWhatsappMsg', False)
-
-    #     if isTwitterMsg:
-    #         print("Processing Twitter message")
-    #         # If it's a Twitter message, we might want to handle it differently
-    #         # For now, we will just proceed with the same logic
-    #         pass
-    #     elif isWhatsappMsg:
-    #         print("Processing WhatsApp message")
-    #     language_code = state.get('language_code', 'en')
-    #     current_date = datetime.now().strftime("%B %d, %Y")
-        
-    #     if (state.get('used_google_fact_check', False) == True and state.get('fact_check_results', {}) == {}):
-    #         if isTwitterMsg or isWhatsappMsg:
-    #             pass  # Do nothing, just process
-    #         else:
-    #             return {"messages": "Not Found"}
-        
-    #     # Extract the user's query
-    #     user_query = None
-    #     for message in reversed(messages):
-    #         if isinstance(message, HumanMessage):
-    #             user_query = message.content
-    #             break
-        
-    #     if not user_query:
-    #         return {"messages": messages}
-        
-    #     # Create a consolidated sources list
-    #     boom_sources = []
-    #     # Get BOOM results directly from state
-    #     boom_results = state.get('boom_results', {})
-    #     # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    #     # print("boom_results:", boom_results)
-    #     # print("boom_sources:", boom_sources)
-    #     # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-
-    #     # Format the BOOM results for inclusion in the prompt if they exist
-    #     formatted_boom_results = None
-    #     if boom_results:
-    #         tool_name = state.get('tool_name', '')
-    #         if tool_name == 'rag_search' and 'rag_search' in boom_results:
-    #             rag_data = boom_results['rag_search']
-    #             sources_urls = rag_data.get('sources_url', [])
-    #             sources_docs = rag_data.get('sources_documents', [])
-    #             if isTwitterMsg or isWhatsappMsg:
-    #                 sources_urls = sources_urls[:5]
-    #                 sources_docs = sources_docs[:5]
-    #             boom_sources.extend(sources_urls)
-    #             if sources_urls or sources_docs:
-    #                 formatted_boom_results = ""
-                    
-    #                 # Add URLs
-    #                 if sources_urls:
-    #                     formatted_boom_results += "Sources:\n"
-    #                     for url in sources_urls[:3]:
-    #                         formatted_boom_results += f"- {url}\n"
-                    
-    #                 # Add document excerpts
-    #                 if sources_docs:
-    #                     formatted_boom_results += "\nCheck for most relevant article for from below:\n"
-    #                     for doc in sources_docs[:3]:
-    #                         source = doc.get('source', 'Unknown source')
-    #                         content = doc.get('content', 'No content available')
-    #                         formatted_boom_results += f"From {source}:\n{content}\n\n"
-            
-    #         elif tool_name in ['get_custom_date_range_articles', 'get_latest_articles'] and tool_name in boom_results:
-    #             sources_urls = boom_results[tool_name].get('sources_url', [])
-    #             # print("Sources URLs:", sources_urls, "inside result_agent")
-    #             if sources_urls:
-    #                 boom_sources.extend(sources_urls)
-    #                 formatted_boom_results = f"Sources:\n"
-    #                 for url in sources_urls[:3]:
-    #                     formatted_boom_results += f"- {url}\n"
-            
-    #         elif tool_name == 'get_articles_by_topic' and tool_name in boom_results:
-    #             sources = boom_results[tool_name].get('sources', [])
-    #             if sources:
-    #                 formatted_boom_results = "Sources:\n"
-    #                 for source in sources[:3]:
-    #                     print(f"Source: {source}")
-    #                     boom_sources.append(source[1])
-    #                     formatted_boom_results += f"- {source}\n"
-        
-    #     # Format Google Fact Check results only if they exist
-    #     fact_check_results = state.get('fact_check_results', {})
-    #     formatted_fact_checks = None
-        
-    #     if fact_check_results and 'claims' in fact_check_results and fact_check_results['claims']:
-    #         formatted_fact_checks = []
-    #         for claim in fact_check_results['claims'][:3]:  # Limit to top 3 claims
-    #             claim_text = claim.get('text', 'No claim text available')
-    #             claimant = claim.get('claimant', 'Unknown source')
-                
-    #             reviews = []
-    #             for review in claim.get('claimReview', []):
-    #                 publisher = review.get('publisher', {}).get('name', 'Unknown fact-checker')
-    #                 rating = review.get('textualRating', 'No rating available')
-    #                 url = review.get('url', '')
-    #                 if url:
-    #                     boom_sources.append(url)
-    #                 reviews.append(f"- According to {publisher}: {rating} ({url})")
-                
-    #             formatted_claim = f"Claim: \"{claim_text}\" by {claimant}\n"
-    #             formatted_claim += "\n".join(reviews)
-    #             formatted_fact_checks.append(formatted_claim)
-            
-    #         formatted_fact_checks = "\n\n".join(formatted_fact_checks)
-
-    #     unique_sources = list(set(boom_sources))
-    #     # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-    #     # print("user_query:", user_query)
-    #     # print("formatted_boom_results:", formatted_boom_results)
-    #     # print("formatted_fact_checks:", formatted_fact_checks)
-    #     # print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-    #     if isTwitterMsg:
-    #             # Twitter-specific prompt
-    #             human_content = f"""
-    #             Create a Twitter-friendly response to the user's query based on available information.
-                
-    #             User's query: {user_query}
-    #             """
-                
-    #             if formatted_boom_results:
-    #                 human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
-                
-    #             if formatted_fact_checks:
-    #                 human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
-                
-    #             human_content += f"""
-                
-    #             TWITTER RESPONSE REQUIREMENTS:
-    #             - Keep the response under 200 characters (Twitter's character limit)
-    #             - Use clear, concise language suitable for social media
-    #             - Include 1-2 relevant emojis to make it engaging
-    #             - NO markdown formatting (no **, [], (), etc.)
-    #             - Make it conversational and direct
-    #             - IMPORTANT: For URLs, use ONLY the raw URL (e.g., https://www.boomlive.in/article-url)
-    #             - DO NOT use markdown link format like [text](url) - Twitter doesn't support this
-    #             - Twitter will automatically shorten and make URLs clickable
-    #             - If including a source URL, ensure the COMPLETE raw URL fits within the 200 character limit
-    #             - If the content + full URL exceeds 200 characters, prioritize the URL and shorten the message
-    #             - Alternative: You can skip the source URL and focus on the key message if space is tight
-    #             - Provide the response in language code: {language_code}
-    #             - Focus on the most important facts only
-    #             - Make it shareable and engaging for Twitter audience
-    #             - Count characters carefully to ensure nothing gets cut off
-    #             - If user's query:{user_query} is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then its "not verified", 
-    #             - If the news is "not verified" then provide a response that says:
-    #                 "The claim about {user_query} has not been verified by BOOM. Our team is reviewing it and will update if verified. If in doubt, please avoid sharing unverified information."
-    #                 and provide this link https://boomlive.in/fact-check 
-    #             - If news is verifies then provide the correct url of the article in the response from BOOM search results or Other Fact Check results
-    #             Note: Today's date is {current_date}.
-    #             """
-
-
-    #     elif isWhatsappMsg:
-    #         human_content = f"""
-    #     You are generating a WhatsApp message to answer a user's fact-check query.
-
-    #     User's query: {user_query}
-
-    #     {("BOOM search results:\n" + formatted_boom_results) if formatted_boom_results else ""}
-    #     {("Other Fact Check results:\n" + formatted_fact_checks) if formatted_fact_checks else ""}
-
-    #     REQUIREMENTS:
-    #     - Maximum length: 300 characters (including any URLs).
-    #     - Begin with 1-2 context-appropriate emojis.
-    #     - *Bold* the key verdict or main fact (use asterisks).
-    #     - Add a short, simple, clear summary in the user's language ({language_code}).
-    #     - End with Source: [RAW URL] on a new line. No markdown.
-    #     - If both a relevant BOOM and another fact check are found, only include the most direct/correct BOOM article URL in the message.
-    #     - If nothing matches, reply:
-    #     "❗ *The claim about the [topic] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-    #     Source: https://boomlive.in/fact-check"
-    #     - No extra formatting, sections, or text.
-    #     - Make it friendly, trustworthy, and scannable for WhatsApp.
-
-    #     EXAMPLES:
-    #     ✅ *Fact:* [Short answer]
-    #     Source: [URL]
-
-    #     ❗ *The claim about [user_query] has not been verified by BOOM as of {current_date}. Please avoid sharing unverified information.*
-    #     🔗 For more details, visit: https://boomlive.in/fact-check
-
-
-    #     Today's date: {current_date}
-    #     """
-            
-    #     else:
-    #         # Build content for human message with conditional sections
-    #         human_content = f"""
-    #         Please provide a comprehensive answer to the user's query based on available information.
-            
-    #         User's query: {user_query}
-    #         """
-            
-    #         if formatted_boom_results:
-    #             human_content += f"\n\nBOOM search results:\n{formatted_boom_results}"
-            
-    #         if formatted_fact_checks:
-    #             human_content += f"\n\nOther Fact Check results:\n{formatted_fact_checks}"
-            
-    #         human_content += f"""
-            
-    #         Please synthesize this information into a helpful, accurate response that follows BOOM's journalistic standards.
-    #         Use emojis appropriately to make the response user-friendly.
-    #         Strictlyy Provide the response in language code: {language_code}
-    #         f"Note: Today's date is {current_date}."
-    #         Format your response with clear article citations:
-    #         **(Article Title Of Article1):** Your summary here
-    #         [Read more](Article1 URL here)
-    #         (Add a partition line like hr tag in markdown)
-    #         **(Article Title Of Article2):** Your summary here
-    #         [Read more](Article2 URL here)
-    #         (Add a partition line like hr tag in markdown)
-    #         Cite sources clearly, prioritizing BOOM articles first.
-    #         - If user's query:{user_query} is a not related to asking any claim that can be verified by BOOM search results or Other Fact Check results then just reply with:"Not Found"., 
-
-    #         If no relevant information is available,don't acknowledge this limitation.
-    #         """
-    #     print("Human content prepared for LLM invocation", human_content)
-    #     # Prepare input messages with system message included
-    #     input_messages = [
-    #         self.system_message,
-    #         HumanMessage(content=human_content)
-    #     ]
-    #     print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-    #     print("Input messages prepared for LLM invocation", input_messages)
-    #     print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-
-    #     # Generate the comprehensive response
-    #     response = self.llm.invoke(input_messages)
-    #     print("Result Agent generated a comprehensive response",response)
-    #     # print("Unique sources:", unique_sources)
-    #     # Return the response to be added to the conversation
-    #     return {"messages": [response], "sources_url": unique_sources}
-   
     def __call__(self):
         self.call_tool()
         workflow = StateGraph(MessagesState)

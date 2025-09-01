@@ -19,10 +19,10 @@ def get_vector_store(index_name: str = "boom-faq-index") -> PineconeVectorStore:
         raise ValueError("PINECONE_API_KEY_ABHINANDAN is not set in environment")
 
     # Set the expected env var for LangChain
-    os.environ["PINECONE_API_KEY"] = api_key
+    # os.environ["PINECONE_API_KEY"] = api_key
 
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    return PineconeVectorStore(index_name=index_name, embedding=embeddings)
+    return PineconeVectorStore(index_name=index_name, embedding=embeddings, pinecone_api_key=api_key)
 
 
 def store_faq(question: str, answer: str, index_name: str = "boom-faq-index") -> Dict[str, Any]:
@@ -47,11 +47,15 @@ def search_faq(query: str, top_k: int = 3, index_name: str = "boom-faq-index") -
     """
     Search FAQs in the vector store.
     """
+    # os.environ["PINECONE_API_KEY"] = os.getenv("PINECONE_API_KEY_ABHINANDAN")
     if not query.strip():
         return {"success": False, "error": "Query cannot be empty"}
 
     vector_store = get_vector_store(index_name)
     results = vector_store.similarity_search(query, k=top_k)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    print(results)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     return {
         "success": True,
