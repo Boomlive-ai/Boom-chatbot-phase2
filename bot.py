@@ -946,11 +946,12 @@ class chatbot:
             - Use emojis appropriately to make it user-friendly
             - Provide response in language code: {language_code}
             - Keep the original formatting and structure of the answers
-            
+            - 🚫 Do NOT number the responses
+
             Formatting based on chatbot type:
             - If {chatbot_type} == "web": use normal markdown 
-            - If {chatbot_type} == "whatsapp": Use plain text with *bold*, _italics_, and emojis
-            - If {chatbot_type} == "twitter": Keep it concise, numbered, and add hashtags if relevant
+            - If {chatbot_type} == "whatsapp": Use plain text with *bold*, _italics_, and emojis ,make the response answer user friendly, treating this as user query:{user_query}.
+            - If {chatbot_type} == "twitter": Keep it concise, numbered, and add hashtags if relevant,make the response answer user friendly, treating this as user query:{user_query}.
             """  
         print("Human content prepared for LLM invocation", human_content)
         # Prepare input messages with system message included
