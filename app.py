@@ -57,34 +57,158 @@ async def store_docs(input_data: MultiDocInput):
 
 
 
+# @app.get("/query")
+# async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, using_Whatsapp: bool = False):
+#     """
+#     Query the chatbot with a question, using a specific thread ID.
+#     """
+#     try:
+#         print("USING WHATSAPP",using_Whatsapp)
+#         chatbot_type = "whatsapp" if using_Whatsapp else ("twitter" if using_Twitter else "web")
+#         input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp, "chatbot_type": chatbot_type}
+#         config = {"configurable": {"thread_id": thread_id}}
+
+#         # Invoke the workflow with the specified thread_id
+#         response = workflow.invoke(input_data, config)
+#         sources_url = []
+#         used_google_fact_check = response.get("used_google_fact_check", False)
+#         fact_check_results = response.get("fact_check_results", {})  # <— define early
+#         used_general_search= response.get("used_general_search", {})
+#         general_search_results= response.get("general_search_results", {})
+
+#         print(f"used_google_fact_check: {used_google_fact_check}")
+#         if isinstance(fact_check_results, dict):
+#             claims_list = fact_check_results.get("claims", [])
+#         else:
+#             claims_list = []
+#         if used_google_fact_check and claims_list:
+#             # fact_check_results = response.get("fact_check_results", [])
+#             print(f"fact_check_results: {fact_check_results}")
+#             # extract every review["url"] from each claim
+#             gc_urls = [
+#                 review["url"]
+#                 for claim in claims_list
+#                 for review in claim.get("claimReview", [])
+#                 if isinstance(review, dict) and "url" in review
+#             ]
+#             print(f"gc_urls: {gc_urls}")
+#             sources_url.extend(gc_urls)
+#         else:
+#             for tool_name, result in response.get("tool_results", {}).items():
+#                 urls = result.get("sources_url")
+#                 if isinstance(urls, list):
+#                     sources_url.extend(urls)
+        
+#         result = response["messages"][-1].content
+#         print(f"Result: {result}")
+#         isBoomVerified = check_boom_verification_status(result)
+
+#         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+#         print(f"FACT CHECK RESULTS: {response['fact_check_results']}")
+#         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
+#         print("\nConversation:")
+#         for message in response["messages"]:
+#             if isinstance(message, HumanMessage):
+#                 print(f"\nHuman: {message.content}")
+#             elif isinstance(message, AIMessage):
+#                 print(f"\nAI: {message.content}")
+#                 if hasattr(message, 'tool_calls') and message.tool_calls:
+#                     for tool_call in message.tool_calls:
+#                         print(f"  Tool Call: {tool_call['name']}({tool_call['args']})")
+#         if used_general_search and 'trusted_results' in general_search_results:
+#             sources_url = [
+#                 result['url']
+#                 for result in general_search_results['trusted_results']
+#                 if 'url' in result
+#             ]
+#         sources = prioritize_sources(question, sources_url, result)
+
+#         # Store unverified content in Google Sheets
+#         if not isBoomVerified:
+#             print("⚠️  CONTENT NOT VERIFIED - Storing in Google Sheets...")
+#             await store_unverified_content_to_sheets(
+#                 question=question,
+#                 response=result,
+#                 thread_id=thread_id,
+#                 fact_check_results=fact_check_results,
+#                 sources=sources[:3],
+#                 using_Twitter=using_Twitter,
+#                 using_Whatsapp=using_Whatsapp
+#             )
+#         else:
+#             print("✅ CONTENT VERIFIED - Not storing in Google Sheets")
+#         response_payload = {
+#             "status": "success",
+#             "thread_id": thread_id,
+#             "response": result,
+#             "sources": sources[:3],
+#             "isBoomVerified": isBoomVerified,
+#         }
+#         if used_google_fact_check and fact_check_results:
+#             response_payload["fact_check_results"] = fact_check_results
+            
+#         print("ENVIRONMENT VARIABLES IN OS",os.environ)
+#         return response_payload
+#     except KeyError:
+#         raise HTTPException(status_code=404, detail="Thread ID not found.")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# Add this to your /query endpoint - just before the response_payload creation
+
 @app.get("/query")
-async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, using_Whatsapp: bool = False):
+async def query_bot(
+    question: str, 
+    thread_id: str, 
+    using_Twitter: bool = False, 
+    using_Whatsapp: bool = False,
+    using_ScamCheck: bool = False  # ADD THIS PARAMETER
+):
     """
     Query the chatbot with a question, using a specific thread ID.
     """
     try:
-        print("USING WHATSAPP",using_Whatsapp)
-        chatbot_type = "whatsapp" if using_Whatsapp else ("twitter" if using_Twitter else "web")
-        input_data = {"messages": [HumanMessage(content=question)], "isTwitterMsg": using_Twitter, "isWhatsappMsg": using_Whatsapp, "chatbot_type": chatbot_type}
+        print("USING WHATSAPP", using_Whatsapp)
+        print("USING SCAM CHECK", using_ScamCheck)  # ADD THIS
+        
+        # MODIFY THIS SECTION - treat scam_check as web
+        if using_ScamCheck:
+            chatbot_type = "web"  # Keep as web for same flow
+            is_scam_check = True   # But track that it's scam check
+        elif using_Whatsapp:
+            chatbot_type = "whatsapp"
+            is_scam_check = False
+        elif using_Twitter:
+            chatbot_type = "twitter"
+            is_scam_check = False
+        else:
+            chatbot_type = "web"
+            is_scam_check = False
+            
+        input_data = {
+            "messages": [HumanMessage(content=question)], 
+            "isTwitterMsg": using_Twitter, 
+            "isWhatsappMsg": using_Whatsapp,
+            "chatbot_type": chatbot_type
+        }
         config = {"configurable": {"thread_id": thread_id}}
 
         # Invoke the workflow with the specified thread_id
         response = workflow.invoke(input_data, config)
         sources_url = []
         used_google_fact_check = response.get("used_google_fact_check", False)
-        fact_check_results = response.get("fact_check_results", {})  # <— define early
-        used_general_search= response.get("used_general_search", {})
-        general_search_results= response.get("general_search_results", {})
+        fact_check_results = response.get("fact_check_results", {})
+        used_general_search = response.get("used_general_search", {})
+        general_search_results = response.get("general_search_results", {})
 
         print(f"used_google_fact_check: {used_google_fact_check}")
         if isinstance(fact_check_results, dict):
             claims_list = fact_check_results.get("claims", [])
         else:
             claims_list = []
+            
         if used_google_fact_check and claims_list:
-            # fact_check_results = response.get("fact_check_results", [])
-            print(f"fact_check_results: {fact_check_results}")
-            # extract every review["url"] from each claim
             gc_urls = [
                 review["url"]
                 for claim in claims_list
@@ -103,9 +227,9 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
         print(f"Result: {result}")
         isBoomVerified = check_boom_verification_status(result)
 
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print("$" * 100)
         print(f"FACT CHECK RESULTS: {response['fact_check_results']}")
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        print("$" * 100)
 
         print("\nConversation:")
         for message in response["messages"]:
@@ -116,12 +240,24 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
                 if hasattr(message, 'tool_calls') and message.tool_calls:
                     for tool_call in message.tool_calls:
                         print(f"  Tool Call: {tool_call['name']}({tool_call['args']})")
+                        
         if used_general_search and 'trusted_results' in general_search_results:
             sources_url = [
                 result['url']
                 for result in general_search_results['trusted_results']
                 if 'url' in result
             ]
+        
+        # ADD THIS NEW SECTION - Extract URLs from response text for scam check
+        if is_scam_check and not sources_url:
+            import re
+            # Extract all URLs from the response text
+            url_pattern = r'https?://[^\s\)\]>]+'
+            extracted_urls = re.findall(url_pattern, result)
+            if extracted_urls:
+                sources_url.extend(extracted_urls)
+                print(f"Extracted {len(extracted_urls)} URLs from scam check response")
+        
         sources = prioritize_sources(question, sources_url, result)
 
         # Store unverified content in Google Sheets
@@ -138,6 +274,7 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
             )
         else:
             print("✅ CONTENT VERIFIED - Not storing in Google Sheets")
+            
         response_payload = {
             "status": "success",
             "thread_id": thread_id,
@@ -145,15 +282,18 @@ async def query_bot(question: str, thread_id: str, using_Twitter: bool = False, 
             "sources": sources[:3],
             "isBoomVerified": isBoomVerified,
         }
+        
         if used_google_fact_check and fact_check_results:
             response_payload["fact_check_results"] = fact_check_results
             
-        print("ENVIRONMENT VARIABLES IN OS",os.environ)
+        print("ENVIRONMENT VARIABLES IN OS", os.environ)
         return response_payload
+        
     except KeyError:
         raise HTTPException(status_code=404, detail="Thread ID not found.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 from fastapi import Query
 from typing import List, Dict, Any, Optional
