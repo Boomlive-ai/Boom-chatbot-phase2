@@ -6,6 +6,7 @@ import google.generativeai as genai
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from fastapi.middleware.cors import CORSMiddleware
+from tools import ArticleTools
 from FAQVectorStore import store_faq, search_faq
 from utils import prioritize_sources,check_boom_verification_status,store_unverified_content_to_sheets,test_google_sheets_manually
 app = FastAPI(debug=True)
@@ -16,6 +17,7 @@ from bot import chatbot
 
 # Initialize the chatbot
 mybot = chatbot()
+article_tools = ArticleTools()
 workflow = mybot()
 
 # Configure CORS
@@ -44,6 +46,8 @@ class FAQBatch(BaseModel):
 class FAQQuery(BaseModel):
     query: str
     top_k: int = 3
+class ScamCheckInput(BaseModel):
+    query: str
 
 @app.post("/store-docs")
 async def store_docs(input_data: MultiDocInput):
@@ -413,6 +417,18 @@ async def store_bulk_faqs(batch: FAQBatch):
 #         }
 #     except Exception as e:
 #         return {"status": "error", "message": str(e)}
+@app.post("/scam-check")
+async def scam_check(input_data: ScamCheckInput):
+    """
+    Perform scam check using semantic search and return filtered ScamCheck URLs.
+    """
+    try:
+        result = article_tools.scam_check_search(
+            query=input_data.query,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 async def root():

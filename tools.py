@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import re, os
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
-from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles
+from utils import fetch_custom_range_articles_urls, fetch_latest_article_urls,extract_articles, prioritize_sources
 from utils import prioritize_sources, translate_text, general_query_search
 from FAQVectorStore import search_faq
 from dotenv import load_dotenv
@@ -15,6 +15,51 @@ from langchain.schema import Document
 class ArticleTools:
     def __init__(self):
         pass
+    
+    @staticmethod
+    def scam_check_search(query: str) -> dict:
+        """
+        Performs semantic search using the latest index to retrieve scam-related article URLs.
+        Filters results to only include unique BoomLive ScamCheck URLs.
+
+        Parameters:
+        - query: The scam-related claim or keyword to verify.
+        - language_code: Language of the query ("en", "hi", "bn"). Default is "en".
+
+        Returns:
+        - Dictionary with filtered unique ScamCheck URLs only.
+        """
+
+        print("🔍 Scam Check Search Triggered")
+        print("Query:", query)
+        # print("Language:", language_code)
+
+        # # Translate query if needed
+        # translated_query = translate_text(query, language_code)
+
+        # Initialize latest index retriever
+        latest_index = PineconeVectorStore(
+            index_name=os.getenv("PINECONE_LATEST_INDEX_NAME"),
+            embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+            pinecone_api_key="829bebca-aceb-4416-8e78-b1972af62abc"
+        )
+        retriever = latest_index.as_retriever(search_kwargs={"k": 5})
+        documents = retriever.get_relevant_documents(query)
+
+        # Extract and filter sources
+        sources = [doc.metadata.get("source", "Unknown") for doc in documents]
+        scamcheck_sources = {
+            url for url in sources
+            if "boomlive.in/decode/scamcheck/" in url
+        }
+
+        prioritized = prioritize_sources(query, list(scamcheck_sources))
+        print(f"✅ Retrieved {len(prioritized)} unique ScamCheck URLs")
+        print("Final URLs:", prioritized)
+        return {
+            "sources_url": prioritized
+        }
+
     @staticmethod
     @tool
     def faq_scam_search(query: str, top_k: int = 3) -> Dict[str, Any]:
