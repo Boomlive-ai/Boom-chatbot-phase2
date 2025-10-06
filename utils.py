@@ -1144,3 +1144,95 @@ FAQ_TRIGGER_QUESTIONS = [
     "How Matrimonial Frauds Work",
     "How Gaming Scams Target Kids"
 ]
+
+
+def fetch_google_fact_check_urls(query: str) -> List[str]:
+    """
+    Fetch fact-check URLs from Google's Fact Check API based on the query.
+
+    Parameters:
+    - query: The factual claim or statement to verify.
+
+    Returns:
+    - List of URLs from verified fact-check sources.
+    """
+    import requests
+    import os
+    import json
+
+    api_key = os.getenv("GOOGLE_FACT_CHECK_TOOL_API")
+    url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
+    params = {
+        "key": api_key,
+        "query": query,
+        "languageCode": "en"  # You can enhance this with langdetect if needed
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            print("Google Fact Check API error:", response.text)
+            return []
+
+        data = response.json()
+        urls = []
+        for claim in data.get("claims", []):
+            for review in claim.get("claimReview", []):
+                url = review.get("url")
+                if url:
+                    urls.append(url)
+
+        return list(set(urls))  # Remove duplicates
+
+    except Exception as e:
+        print("Error fetching from Google Fact Check API:", e)
+        return []
+    
+    
+def fetch_serp_trusted_urls(query: str, language_code: str = "en") -> List[str]:
+    """
+    Fetch trusted article URLs using SerpAPI based on the query.
+
+    Parameters:
+    - query: The user's search query.
+    - language_code: Language code for localization (default is "en").
+
+    Returns:
+    - List of trusted article URLs.
+    """
+    import requests
+    import os
+
+    serp_api_key = os.getenv("SERP_API_KEY")
+    url = "https://serpapi.com/search"
+    params = {
+        "q": query,
+        "location": "India",
+        "hl": language_code,
+        "gl": "in",
+        "api_key": serp_api_key,
+        "num": 10
+    }
+
+    trusted_domains = [
+        "bbc.com/hindi", "bbc.com/marathi", "bbc.com/news/world/asia/india",
+        "indianexpress.com", "thenewsminute.com", "thehindu.com",
+        "indiaspendhindi.com", "indiaspend.com"
+    ]
+
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        urls = []
+
+        for item in data.get("organic_results", []):
+            url = item.get("link", "")
+            if any(domain in url for domain in trusted_domains):
+                urls.append(url)
+
+        return list(set(urls))  # Remove duplicates
+
+    except Exception as e:
+        print("Error fetching from SerpAPI:", e)
+        return []
+
