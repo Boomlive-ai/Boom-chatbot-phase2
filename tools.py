@@ -10,19 +10,21 @@ from utils import prioritize_sources, translate_text, general_query_search
 from FAQVectorStore import search_faq
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
+import requests
 load_dotenv() 
 
 from langchain.schema import Document
 class ArticleTools:
     def __init__(self):
         pass
-    
+   
+
     @staticmethod
     def scam_check_search(query: str) -> dict:
         """
         Performs semantic search using the latest index to retrieve scam-related article URLs.
         Filters results to only include unique BoomLive ScamCheck URLs.
-        If none found, fetches articles from Google Fact Check and SerpAPI in parallel.
+        If none found, fetches articles from Google Fact Check, SerpAPI, and BoomLive API in parallel.
 
         Parameters:
         - query: The scam-related claim or keyword to verify.
@@ -52,15 +54,46 @@ class ArticleTools:
 
         # Prioritize ScamCheck URLs
         prioritized = prioritize_sources(query, list(scamcheck_sources))
-        print(f"✅ Retrieved {len(prioritized)} unique ScamCheck URLs")
+        print(f"✅ Retrieved {len(prioritized)} unique ScamCheck URLs from vector store")
 
-        # If ScamCheck results are found, return them
-        if prioritized:
-            print("✅ Returning ScamCheck results")
-            return {"sources_url": prioritized}
+        # Fetch from BoomLive API in parallel with other sources
+        def fetch_boomlive_api_urls(query_text: str) -> list:
+            """Fetches article URLs from BoomLive ScamCheck API"""
+            try:
+                api_url = "https://toolbox.boomlive.in/scamcheck-article/submit_form.php"
+                params = {
+                    "action": "search",
+                    "message": query_text
+                }
+                response = requests.get(api_url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                if data.get("status") == "success" and data.get("data"):
+                    urls = [article["article_url"] for article in data["data"]]
+                    print(f"✅ BoomLive API returned {len(urls)} URLs")
+                    return urls
+                return []
+            except Exception as e:
+                print(f"⚠️ BoomLive API error: {str(e)}")
+                return []
 
-        # Otherwise, fetch from Google Fact Check and SerpAPI in parallel
-        print("⚠️ No ScamCheck results found. Fetching from fallback sources...")
+        # Combine vector store results with API results
+        with ThreadPoolExecutor() as executor:
+            future_api = executor.submit(fetch_boomlive_api_urls, query)
+            api_urls = future_api.result()
+
+        # Combine and deduplicate all BoomLive sources
+        all_boomlive_urls = list(set(prioritized + api_urls))
+        
+        # Re-prioritize combined sources
+        if all_boomlive_urls:
+            final_prioritized = prioritize_sources(query, all_boomlive_urls)
+            print(f"✅ Returning {len(final_prioritized)} combined BoomLive URLs")
+            return {"sources_url": final_prioritized}
+
+        # If no BoomLive results at all, fetch from fallback sources
+        print("⚠️ No BoomLive results found. Fetching from fallback sources...")
 
         with ThreadPoolExecutor() as executor:
             future_factcheck = executor.submit(fetch_google_fact_check_urls, query)
@@ -74,7 +107,7 @@ class ArticleTools:
 
         print(f"✅ Fallback sources retrieved: {len(prioritized_fallback)}")
         return {"sources_url": prioritized_fallback}
-    
+
     @staticmethod
     @tool
     def faq_scam_search(query: str, top_k: int = 3) -> Dict[str, Any]:
